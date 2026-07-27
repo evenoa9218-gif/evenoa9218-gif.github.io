@@ -1,0 +1,33 @@
+{
+  "name": "변호사시험 통합 학습",
+  "short_name": "변시학습",
+  "description": "선택형·사례형·암기장·기록형을 한 오리진에서 잇는 학습 허브",
+  "lang": "ko",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#ecf4fb",
+  "background_color": "#ecf4fb",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    { "name": "선택형", "url": "/MCQ/" },
+    { "name": "사례형", "url": "/CASE_Practice/" },
+    { "name": "암기장", "url": "/Core_Notes/" }
+  ]
+}

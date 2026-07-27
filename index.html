@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#ecf4fb">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<title>변호사시험 통합 학습</title>
+<script src="core/store.js"></script>
+<script>
+// 테마: 허브는 lawhub_theme을 쓰되, 없으면 CASE_Practice의 cp_theme을 물려받는다.
+(function(){
+  var t = localStorage.getItem('lawhub_theme') || localStorage.getItem('cp_theme') || 'light';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<style>
+/* ── CASE_Practice / MCQ와 동일한 색 토큰 ─────────────── */
+:root[data-theme="dark"]{
+  --bg:#10192a; --sf:#172238; --sf2:#1d2d48; --bd:#284060; --bd2:#1e3254;
+  --gold:#7ab8d8; --gold2:#9acce8; --gf:#2e6282;
+  --tx:#cce6f8; --tx2:#6aa8cc; --tx3:#366078;
+  --hd:#0c1424; --ok:#4caf7d; --no:#e2685f; --shadow:0 1px 3px rgba(0,0,0,.4);
+}
+:root[data-theme="light"]{
+  --bg:#ecf4fb; --sf:#ffffff; --sf2:#dceef8; --bd:#b4d0e8; --bd2:#cce0f2;
+  --gold:#2464a0; --gold2:#2e74b5; --gf:#2a5f88;
+  --tx:#192233; --tx2:#3a5870; --tx3:#5878a0;
+  --hd:#16233a; --ok:#2e7d55; --no:#c4463c; --shadow:0 1px 3px rgba(30,60,100,.10);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif;
+  line-height:1.7;-webkit-text-size-adjust:100%}
+.wrap{max-width:1080px;margin:0 auto;padding:16px}
+
+.hd{background:var(--hd);color:#e8f2fb;padding:13px 18px;
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  position:sticky;top:0;z-index:30}
+.hd h1{margin:0;font-size:16.5px;letter-spacing:-.02em;font-weight:700}
+.hd .sub{font-size:11.5px;opacity:.72;margin-top:2px}
+
+.btn{background:var(--sf);color:var(--tx);border:1px solid var(--bd);
+  border-radius:8px;padding:8px 13px;font-size:13px;cursor:pointer;font-family:inherit}
+.btn:hover{border-color:var(--gold)}
+.btn.pri{background:var(--gold);border-color:var(--gold);color:#fff;font-weight:600}
+.btn.pri:hover{background:var(--gold2)}
+.btn:disabled{opacity:.42;cursor:default}
+.btn.ghost{background:transparent;color:#cfe3f5;border-color:rgba(255,255,255,.22)}
+.btn.ghost:hover{border-color:#9acce8}
+
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;
+  padding:15px;margin-bottom:11px;box-shadow:var(--shadow)}
+.row{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.tag{display:inline-block;font-size:11px;padding:3px 9px;border-radius:999px;
+  background:var(--sf2);color:var(--tx2);border:1px solid var(--bd2)}
+.tag.gold{background:var(--sf2);color:var(--gold);border-color:var(--gold);font-weight:600}
+.tag.ok{background:var(--sf2);color:var(--ok);border-color:var(--ok)}
+.muted{color:var(--tx3);font-size:12px}
+.title{font-size:14.5px;font-weight:700;margin:0 0 9px;color:var(--tx)}
+.empty{text-align:center;color:var(--tx3);padding:44px 16px}
+input[type=text]{background:var(--sf);color:var(--tx);border:1px solid var(--bd);
+  border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit}
+input[type=text]:focus{outline:none;border-color:var(--gold)}
+
+/* ── 앱 진입 카드 ───────────────────────────────── */
+.apps{display:grid;gap:11px;margin-bottom:20px}
+@media(min-width:720px){.apps{grid-template-columns:1fr 1fr}}
+.app{display:block;text-decoration:none;color:inherit;
+  background:var(--sf);border:1px solid var(--bd);border-radius:12px;
+  padding:16px 17px;box-shadow:var(--shadow);
+  transition:border-color .12s,transform .12s}
+.app:hover{border-color:var(--gold);transform:translateY(-1px)}
+.app .ico{font-size:22px;line-height:1}
+.app h2{margin:8px 0 3px;font-size:16px;font-weight:700;letter-spacing:-.02em}
+.app p{margin:0;font-size:12.5px;color:var(--tx2);line-height:1.65}
+.app.off{opacity:.5;cursor:default;pointer-events:none}
+.app.off:hover{border-color:var(--bd);transform:none}
+
+/* ── 학습 현황 ──────────────────────────────────── */
+.stats{display:grid;gap:9px}
+@media(min-width:640px){.stats{grid-template-columns:repeat(3,1fr)}}
+.stat{background:var(--sf2);border:1px solid var(--bd2);border-radius:10px;padding:12px 14px}
+.stat .n{font-size:20px;font-weight:700;color:var(--gold);letter-spacing:-.02em}
+.stat .l{font-size:11.5px;color:var(--tx3);margin-top:1px}
+table.sub{width:100%;border-collapse:collapse;margin-top:13px;font-size:13px}
+table.sub th{text-align:left;font-weight:500;color:var(--tx3);font-size:11.5px;
+  padding:6px 8px;border-bottom:1px solid var(--bd)}
+table.sub td{padding:8px;border-bottom:1px solid var(--bd2);color:var(--tx2)}
+table.sub td:first-child{color:var(--tx);font-weight:600}
+table.sub th:not(:first-child),table.sub td:not(:first-child){text-align:right}
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <div>
+    <h1>⚖ 변호사시험 통합 학습</h1>
+    <div class="sub" id="hdSub">불러오는 중...</div>
+  </div>
+  <div class="row">
+    <button class="btn ghost" id="themeBtn" title="테마 전환">🌙</button>
+    <button class="btn ghost" id="userBtn" hidden>나가기</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- 앱 진입 -->
+  <div class="apps">
+    <a class="app" href="/MCQ/">
+      <div class="ico">📝</div>
+      <h2>선택형 <span class="tag gold">MCQ</span></h2>
+      <p>객관식 문제 풀이와 오답 관리</p>
+    </a>
+    <a class="app" href="/CASE_Practice/">
+      <div class="ico">📄</div>
+      <h2>사례형 <span class="tag gold">CASE</span></h2>
+      <p>변시·모의 기출 사례형 답안 작성</p>
+    </a>
+    <a class="app" href="/Core_Notes/">
+      <div class="ico">🗂</div>
+      <h2>암기장 <span class="tag gold">NOTES</span></h2>
+      <p>쟁점 카드 반복 암기</p>
+    </a>
+    <div class="app off" aria-disabled="true">
+      <div class="ico">✍</div>
+      <h2>기록형 <span class="tag">준비 중</span></h2>
+      <p>아직 구축되지 않았습니다</p>
+    </div>
+  </div>
+
+  <!-- 학습 현황 -->
+  <div class="card">
+    <div class="title">학습 현황</div>
+    <div id="dash"><div class="muted">집계 중...</div></div>
+  </div>
+
+  <!-- 사용자 -->
+  <div class="card" id="userCard" hidden>
+    <div class="title">사용자</div>
+    <div id="userBody"></div>
+  </div>
+
+  <div class="muted" style="text-align:center;padding:8px 0 24px" id="swNote"></div>
+</div>
+
+<script>
+'use strict';
+
+// ── 표시 헬퍼 ─────────────────────────────────────
+const SUBJECT_ORDER = ['공법','형사법','민사법','국제법','국제거래법'];
+const MODE_LABEL = { mcq:'선택형', case:'사례형', memo:'암기장', record:'기록형' };
+
+const pad = n => String(n).padStart(2,'0');
+const fmtDate = ts => { const d = new Date(ts);
+  return `${d.getFullYear()}.${pad(d.getMonth()+1)}.${pad(d.getDate())}`; };
+function fmtDuration(sec){
+  sec = Math.max(0, Math.round(sec||0));
+  const h = Math.floor(sec/3600), m = Math.round((sec%3600)/60);
+  if(h && m) return `${h}시간 ${m}분`;
+  if(h) return `${h}시간`;
+  if(m) return `${m}분`;
+  return sec ? `${sec}초` : '—';
+}
+const el = (t,cls,txt)=>{ const e=document.createElement(t);
+  if(cls) e.className=cls; if(txt!=null) e.textContent=txt; return e; };
+
+// ── 테마 ─────────────────────────────────────────
+const themeBtn = document.getElementById('themeBtn');
+function paintTheme(){
+  const t = document.documentElement.getAttribute('data-theme') || 'light';
+  themeBtn.textContent = t === 'light' ? '🌙' : '☀';
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if(meta) meta.setAttribute('content', t === 'light' ? '#ecf4fb' : '#10192a');
+}
+themeBtn.addEventListener('click', ()=>{
+  const cur = document.documentElement.getAttribute('data-theme') || 'light';
+  const next = cur === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('lawhub_theme', next);
+  paintTheme();
+});
+paintTheme();
+
+// ── 대시보드 ─────────────────────────────────────
+const dash = document.getElementById('dash');
+const hdSub = document.getElementById('hdSub');
+const userCard = document.getElementById('userCard');
+const userBody = document.getElementById('userBody');
+const userBtn = document.getElementById('userBtn');
+
+// 과목별 학습량 집계 — 푼 문제 수 · 총 학습시간 · 최근 학습일
+function aggregate(records){
+  const bySubject = new Map();
+  let seconds = 0, last = 0;
+  for(const r of records){
+    const key = r.subject || '(과목 없음)';
+    let e = bySubject.get(key);
+    if(!e){ e = { subject:key, count:0, seconds:0, last:0, modes:new Set() }; bySubject.set(key, e); }
+    e.count++;
+    e.seconds += r.seconds || 0;
+    e.last = Math.max(e.last, r.at || 0);
+    if(r.mode) e.modes.add(r.mode);
+    seconds += r.seconds || 0;
+    last = Math.max(last, r.at || 0);
+  }
+  const rows = [...bySubject.values()].sort((a,b)=>{
+    const ia = SUBJECT_ORDER.indexOf(a.subject), ib = SUBJECT_ORDER.indexOf(b.subject);
+    if(ia !== ib) return (ia<0?99:ia) - (ib<0?99:ib);
+    return a.subject.localeCompare(b.subject, 'ko');
+  });
+  return { rows, total:records.length, seconds, last };
+}
+
+function renderDashboard(records){
+  dash.textContent = '';
+  if(!records.length){
+    const e = el('div','empty','아직 학습 기록이 없습니다');
+    e.appendChild(el('div','muted','위 앱에서 문제를 풀면 여기에 과목별 학습량이 쌓입니다.'));
+    dash.appendChild(e);
+    return;
+  }
+  const agg = aggregate(records);
+
+  const stats = el('div','stats');
+  [[agg.total.toLocaleString('ko-KR')+'건','푼 문제 수'],
+   [fmtDuration(agg.seconds),'총 학습시간'],
+   [agg.last ? fmtDate(agg.last) : '—','최근 학습일']].forEach(([n,l])=>{
+    const s = el('div','stat'); s.appendChild(el('div','n',n)); s.appendChild(el('div','l',l));
+    stats.appendChild(s);
+  });
+  dash.appendChild(stats);
+
+  const tbl = el('table','sub');
+  const thead = el('thead'), htr = el('tr');
+  ['과목','푼 문제 수','학습시간','최근 학습일'].forEach(h=>htr.appendChild(el('th',null,h)));
+  thead.appendChild(htr); tbl.appendChild(thead);
+  const tbody = el('tbody');
+  for(const r of agg.rows){
+    const tr = el('tr');
+    const first = el('td');
+    first.appendChild(document.createTextNode(r.subject));
+    const modes = [...r.modes].map(m=>MODE_LABEL[m]||m).join(' · ');
+    if(modes){ const sp = el('span','muted',' '+modes); sp.style.fontWeight='400'; first.appendChild(sp); }
+    tr.appendChild(first);
+    tr.appendChild(el('td',null, r.count.toLocaleString('ko-KR')+'건'));
+    tr.appendChild(el('td',null, fmtDuration(r.seconds)));
+    tr.appendChild(el('td',null, r.last ? fmtDate(r.last) : '—'));
+    tbody.appendChild(tr);
+  }
+  tbl.appendChild(tbody);
+  dash.appendChild(tbl);
+}
+
+function renderSignedOut(msg){
+  dash.textContent = '';
+  const e = el('div','empty', msg || '사용자를 설정하면 학습 현황이 표시됩니다');
+  dash.appendChild(e);
+}
+
+// ── 사용자 ───────────────────────────────────────
+function renderUser(uid){
+  userCard.hidden = false;
+  userBody.textContent = '';
+  if(uid){
+    const row = el('div','row');
+    row.appendChild(el('span','tag ok', uid));
+    row.appendChild(el('span','muted','이 기기에 저장됩니다 · 답안 전문은 기기 밖으로 나가지 않습니다'));
+    userBody.appendChild(row);
+    userBtn.hidden = false;
+  }else{
+    const row = el('div','row');
+    const input = document.createElement('input');
+    input.type = 'text'; input.placeholder = '사용자 ID'; input.style.flex = '1 1 180px';
+    const btn = el('button','btn pri','시작하기');
+    const submit = ()=>{
+      const v = input.value.trim();
+      if(!v) return;
+      Store.setUser(v);
+      boot();
+    };
+    btn.addEventListener('click', submit);
+    input.addEventListener('keydown', e=>{ if(e.key === 'Enter') submit(); });
+    row.appendChild(input); row.appendChild(btn);
+    userBody.appendChild(row);
+    userBody.appendChild(el('div','muted','네 앱이 같은 사용자 ID를 공유합니다.'));
+    userBtn.hidden = true;
+  }
+}
+
+userBtn.addEventListener('click', ()=>{ Store.setUser(null); boot(); });
+
+// ── 부팅 ─────────────────────────────────────────
+async function boot(){
+  let uid = null;
+  try{
+    const st = await Store.init({});
+    uid = st.uid;
+  }catch(e){
+    hdSub.textContent = '저장소를 열 수 없습니다';
+    renderSignedOut('브라우저 저장소를 사용할 수 없어 학습 현황을 표시할 수 없습니다');
+    userCard.hidden = true;
+    return;
+  }
+
+  renderUser(uid);
+  if(!uid){
+    hdSub.textContent = '사용자 미설정';
+    renderSignedOut();
+    return;
+  }
+
+  let records = [];
+  try{
+    records = await Store.getRecords({});
+  }catch(e){
+    records = [];   // 기록을 못 읽어도 허브는 떠 있어야 한다
+  }
+  hdSub.textContent = `${uid} · 기록 ${records.length}건`;
+  renderDashboard(records);
+}
+
+boot();
+
+// ── 서비스워커 (file://에서는 등록되지 않는다) ─────
+const swNote = document.getElementById('swNote');
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  navigator.serviceWorker.register('sw.js', { scope: './' })
+    .then(reg=>{ swNote.textContent = '오프라인 사용 준비됨 (scope: ' + reg.scope + ')'; })
+    .catch(err=>{ swNote.textContent = '오프라인 캐시를 켜지 못했습니다: ' + err.message; });
+}else{
+  swNote.textContent = 'http(s)로 열면 오프라인 사용이 켜집니다.';
+}
+</script>
+</body>
+</html>
