@@ -73,34 +73,9 @@ input[type=text]{background:var(--sf);color:var(--tx);border:1px solid var(--bd)
 input[type=text]:focus{outline:none;border-color:var(--gold)}
 
 /* ── 로그인·앱선택 장면 (MCQ와 같은 글래스모피즘) ───── */
-/* 배경은 MCQ의 .bg-scene을 그대로 옮겼다. 두 사이트가 같은 화면으로 보여야 한다. */
-.scene{position:fixed;inset:0;z-index:0;overflow:hidden}
-.scene .bg{position:absolute;inset:0;
-  background:
-    radial-gradient(1200px 800px at 18% 12%, rgba(52,96,168,.28), transparent 60%),
-    radial-gradient(1000px 700px at 82% 78%, rgba(122,84,168,.20), transparent 62%),
-    radial-gradient(900px 600px at 60% 20%, rgba(28,72,124,.22), transparent 58%),
-    linear-gradient(160deg,#050a16 0%,#081428 45%,#040a18 100%);
-  animation:bgdrift 32s ease-in-out infinite alternate}
-/* 배경 사진 — 그라디언트 위에 덮인다. 사진이 없거나 늦게 오면 그라디언트가 그대로 보인다. */
-.scene .photo{position:absolute;inset:0;background-size:cover;background-position:center;
-  opacity:0;transition:opacity .5s ease}
-.scene .photo.on{opacity:1}
-.scene .veil{position:absolute;inset:0;
-  background:linear-gradient(160deg,rgba(4,12,28,.25) 0%,rgba(8,20,45,.2) 50%,rgba(2,8,20,.3) 100%)}
-/* 사진이 깔리면 글씨가 놓이는 가운데만 어둡게 눌러 준다.
-   색이 있는 베일(남색)을 화면 전체에 씌우면 사진 색감이 통째로 바뀌므로
-   중립 검정만 쓴다. 가장자리는 거의 덮지 않아 원래 색이 그대로 보인다. */
-.scene.has-photo .veil{
-  background:
-    radial-gradient(760px 520px at 50% 50%,
-      rgba(0,0,0,.6) 0%, rgba(0,0,0,.28) 62%, rgba(0,0,0,.1) 100%),
-    linear-gradient(180deg,rgba(0,0,0,.2) 0%,rgba(0,0,0,.1) 45%,rgba(0,0,0,.26) 100%)}
-@keyframes bgdrift{
-  from{background-position:0% 0%,100% 100%,50% 0%,0 0}
-  to{background-position:12% 8%,88% 92%,42% 10%,0 0}
-}
-@media(prefers-reduced-motion:reduce){.scene .bg{animation:none}}
+/* 배경은 검정 단색. 사진과 그라디언트를 둘 다 써 봤지만 투명 카드가 가장
+   또렷하게 보이는 건 아무것도 깔지 않았을 때였다. */
+.scene{position:fixed;inset:0;z-index:0;overflow:hidden;background:#000}
 
 .scene-wrap{position:relative;z-index:1;min-height:100vh;
   display:flex;align-items:center;justify-content:center;padding:20px}
@@ -164,9 +139,7 @@ table.sub th:not(:first-child),table.sub td:not(:first-child){text-align:right}
 <body>
 
 <!-- 로그인 / 앱선택 — MCQ와 같은 배경 위의 투명창 -->
-<div id="scene" class="scene" hidden>
-  <div class="bg"></div><div class="photo" id="bgPhoto"></div><div class="veil"></div>
-</div>
+<div id="scene" class="scene" hidden></div>
 <div id="sceneWrap" class="scene-wrap" hidden>
   <div class="scene-box">
     <div class="scene-head">
@@ -258,39 +231,6 @@ const hub = document.getElementById('hub');
 // 두 키를 함께 맞춰 두어, 어느 쪽에서 로그인하든 이어지게 한다.
 const MCQ_UID_KEY = 'hub_last_uid';
 
-// 로그인·앱선택 화면의 배경 사진. 새로고침할 때마다 이 중 하나가 무작위로 뜬다.
-// 목록을 비우면 CSS 그라디언트만 남는다. 사진을 늘리거나 줄이려면 여기만 고치면 된다.
-const BG_PHOTOS = ['assets/bg/2.webp', 'assets/bg/3.webp'];
-const BG_LAST_KEY = 'lawhub_bg_last';
-
-// 직전에 쓴 사진은 빼고 고른다. 그냥 무작위로 뽑으면 같은 사진이 연달아 나와
-// 새로고침해도 안 바뀐 것처럼 보인다. 두 장뿐이면 매번 확실히 번갈아 나온다.
-function pickPhoto(){
-  if(BG_PHOTOS.length < 2) return BG_PHOTOS[0];
-  let last = null;
-  try{ last = localStorage.getItem(BG_LAST_KEY); }catch(e){}
-  const pool = BG_PHOTOS.filter(p => p !== last);
-  const from = pool.length ? pool : BG_PHOTOS;
-  const pick = from[Math.floor(Math.random() * from.length)];
-  try{ localStorage.setItem(BG_LAST_KEY, pick); }catch(e){}
-  return pick;
-}
-
-function paintBackdrop(){
-  if(!BG_PHOTOS.length) return;
-  const pick = pickPhoto();
-  const layer = document.getElementById('bgPhoto');
-  // 다 받은 뒤에 얹는다. 중간에 그리면 사진이 위에서부터 그려지는 게 보인다.
-  const img = new Image();
-  img.onload = ()=>{
-    layer.style.backgroundImage = 'url("' + pick + '")';
-    layer.classList.add('on');
-    document.getElementById('scene').classList.add('has-photo');
-  };
-  img.onerror = ()=>{ /* 사진이 없으면 그라디언트로 둔다 */ };
-  img.src = pick;
-}
-
 function syncUid(uid){
   try{
     if(uid) localStorage.setItem(MCQ_UID_KEY, uid);
@@ -310,14 +250,12 @@ const APPS = [
   { href:'/RECORD_Practice/', name:'기록형', desc:'기록을 읽고 소장·변론요지서 작성' },
 ];
 
-let backdropPainted = false;
 function showScene(kind){
   const onScene = kind !== 'hub';
-  if(onScene && !backdropPainted){ backdropPainted = true; paintBackdrop(); }
   scene.hidden = sceneWrap.hidden = !onScene;
   hub.hidden = onScene;
-  // 장면 화면은 어두운 배경 위에 얹히므로 테마와 무관하게 배경을 어둡게 둔다
-  document.body.style.background = onScene ? '#050a16' : '';
+  // 장면 화면은 검은 배경 위에 얹히므로 테마와 무관하게 배경을 검게 둔다
+  document.body.style.background = onScene ? '#000' : '';
 }
 
 function renderPick(uid){
