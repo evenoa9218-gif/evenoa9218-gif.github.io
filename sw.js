@@ -14,7 +14,7 @@
  */
 'use strict';
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL_CACHE   = `lawhub-shell-${VERSION}`;
 const RUNTIME_CACHE = `lawhub-runtime-${VERSION}`;
 const DATA_CACHE    = `lawhub-data-${VERSION}`;

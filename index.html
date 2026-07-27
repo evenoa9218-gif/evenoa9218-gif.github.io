@@ -82,6 +82,10 @@ input[type=text]:focus{outline:none;border-color:var(--gold)}
     radial-gradient(900px 600px at 60% 20%, rgba(28,72,124,.22), transparent 58%),
     linear-gradient(160deg,#050a16 0%,#081428 45%,#040a18 100%);
   animation:bgdrift 32s ease-in-out infinite alternate}
+/* 배경 사진 — 그라디언트 위에 덮인다. 사진이 없거나 늦게 오면 그라디언트가 그대로 보인다. */
+.scene .photo{position:absolute;inset:0;background-size:cover;background-position:center;
+  opacity:0;transition:opacity .5s ease}
+.scene .photo.on{opacity:1}
 .scene .veil{position:absolute;inset:0;
   background:linear-gradient(160deg,rgba(4,12,28,.25) 0%,rgba(8,20,45,.2) 50%,rgba(2,8,20,.3) 100%)}
 @keyframes bgdrift{
@@ -152,7 +156,9 @@ table.sub th:not(:first-child),table.sub td:not(:first-child){text-align:right}
 <body>
 
 <!-- 로그인 / 앱선택 — MCQ와 같은 배경 위의 투명창 -->
-<div id="scene" class="scene" hidden><div class="bg"></div><div class="veil"></div></div>
+<div id="scene" class="scene" hidden>
+  <div class="bg"></div><div class="photo" id="bgPhoto"></div><div class="veil"></div>
+</div>
 <div id="sceneWrap" class="scene-wrap" hidden>
   <div class="scene-box">
     <div class="scene-head">
@@ -244,6 +250,27 @@ const hub = document.getElementById('hub');
 // 두 키를 함께 맞춰 두어, 어느 쪽에서 로그인하든 이어지게 한다.
 const MCQ_UID_KEY = 'hub_last_uid';
 
+// 로그인·앱선택 화면의 배경 사진. 새로고침할 때마다 이 중 하나가 무작위로 뜬다.
+// 목록을 비우면 CSS 그라디언트만 남는다. 사진을 늘리거나 줄이려면 여기만 고치면 된다.
+const BG_PHOTOS = [
+  'assets/bg/1.webp', 'assets/bg/2.webp', 'assets/bg/3.webp',
+  'assets/bg/4.webp', 'assets/bg/5.webp', 'assets/bg/6.webp',
+];
+
+function paintBackdrop(){
+  if(!BG_PHOTOS.length) return;
+  const pick = BG_PHOTOS[Math.floor(Math.random() * BG_PHOTOS.length)];
+  const layer = document.getElementById('bgPhoto');
+  // 다 받은 뒤에 얹는다. 중간에 그리면 사진이 위에서부터 그려지는 게 보인다.
+  const img = new Image();
+  img.onload = ()=>{
+    layer.style.backgroundImage = 'url("' + pick + '")';
+    layer.classList.add('on');
+  };
+  img.onerror = ()=>{ /* 사진이 없으면 그라디언트로 둔다 */ };
+  img.src = pick;
+}
+
 function syncUid(uid){
   try{
     if(uid) localStorage.setItem(MCQ_UID_KEY, uid);
@@ -263,8 +290,10 @@ const APPS = [
   { href:null,              name:'기록형',  desc:'아직 구축되지 않았습니다', off:true },
 ];
 
+let backdropPainted = false;
 function showScene(kind){
   const onScene = kind !== 'hub';
+  if(onScene && !backdropPainted){ backdropPainted = true; paintBackdrop(); }
   scene.hidden = sceneWrap.hidden = !onScene;
   hub.hidden = onScene;
   // 장면 화면은 어두운 배경 위에 얹히므로 테마와 무관하게 배경을 어둡게 둔다
@@ -420,8 +449,19 @@ boot();
 // ── 서비스워커 (file://에서는 등록되지 않는다) ─────
 const swNote = document.getElementById('swNote');
 if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  // 새 워커가 자리를 넘겨받으면 한 번만 새로고침한다. 이렇게 하지 않으면
+  // 이미 설치된 옛 워커가 캐시한 화면을 한 번 더 보게 된다.
+  let reloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', ()=>{
+    if(reloading) return;
+    reloading = true;
+    location.reload();
+  });
   navigator.serviceWorker.register('sw.js', { scope: './' })
-    .then(reg=>{ swNote.textContent = '오프라인 사용 준비됨 (scope: ' + reg.scope + ')'; })
+    .then(reg=>{
+      swNote.textContent = '오프라인 사용 준비됨 (scope: ' + reg.scope + ')';
+      reg.update().catch(()=>{});
+    })
     .catch(err=>{ swNote.textContent = '오프라인 캐시를 켜지 못했습니다: ' + err.message; });
 }else{
   swNote.textContent = 'http(s)로 열면 오프라인 사용이 켜집니다.';
