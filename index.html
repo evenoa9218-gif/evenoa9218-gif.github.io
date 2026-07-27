@@ -260,14 +260,25 @@ const MCQ_UID_KEY = 'hub_last_uid';
 
 // 로그인·앱선택 화면의 배경 사진. 새로고침할 때마다 이 중 하나가 무작위로 뜬다.
 // 목록을 비우면 CSS 그라디언트만 남는다. 사진을 늘리거나 줄이려면 여기만 고치면 된다.
-const BG_PHOTOS = [
-  'assets/bg/1.webp', 'assets/bg/2.webp', 'assets/bg/3.webp',
-  'assets/bg/4.webp', 'assets/bg/5.webp', 'assets/bg/6.webp',
-];
+const BG_PHOTOS = ['assets/bg/2.webp', 'assets/bg/3.webp'];
+const BG_LAST_KEY = 'lawhub_bg_last';
+
+// 직전에 쓴 사진은 빼고 고른다. 그냥 무작위로 뽑으면 같은 사진이 연달아 나와
+// 새로고침해도 안 바뀐 것처럼 보인다. 두 장뿐이면 매번 확실히 번갈아 나온다.
+function pickPhoto(){
+  if(BG_PHOTOS.length < 2) return BG_PHOTOS[0];
+  let last = null;
+  try{ last = localStorage.getItem(BG_LAST_KEY); }catch(e){}
+  const pool = BG_PHOTOS.filter(p => p !== last);
+  const from = pool.length ? pool : BG_PHOTOS;
+  const pick = from[Math.floor(Math.random() * from.length)];
+  try{ localStorage.setItem(BG_LAST_KEY, pick); }catch(e){}
+  return pick;
+}
 
 function paintBackdrop(){
   if(!BG_PHOTOS.length) return;
-  const pick = BG_PHOTOS[Math.floor(Math.random() * BG_PHOTOS.length)];
+  const pick = pickPhoto();
   const layer = document.getElementById('bgPhoto');
   // 다 받은 뒤에 얹는다. 중간에 그리면 사진이 위에서부터 그려지는 게 보인다.
   const img = new Image();
