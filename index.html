@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet"
   href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
-<title>변호사시험 통합 학습</title>
+<title>변호사시험 대비.zip</title>
 <script src="core/store.js"></script>
 <script>
 // 테마: 허브는 lawhub_theme을 쓰되, 없으면 CASE_Practice의 cp_theme을 물려받는다.
@@ -94,9 +94,12 @@ input[type=text]:focus{outline:none;border-color:var(--gold)}
   display:flex;align-items:center;justify-content:center;padding:20px}
 .scene-box{width:100%;max-width:440px}
 .scene-head{text-align:center;margin-bottom:24px}
-.scene-logo{font-size:31px;font-weight:900;color:#fff;margin-bottom:6px;letter-spacing:-.3px;
+.scene-logo{font-size:31px;font-weight:900;color:#fff;margin-bottom:7px;letter-spacing:-.3px;
   text-shadow:0 0 18px rgba(120,180,255,.7),0 2px 8px rgba(0,0,0,.9)}
-.scene-desc{font-size:13px;color:rgba(230,240,255,.95);line-height:1.6;
+.scene-logo .ext{font-weight:400;opacity:.6;letter-spacing:0}
+.scene-tagline{font-size:13.5px;color:rgba(220,235,255,.92);line-height:1.6;margin-bottom:6px;
+  word-break:keep-all;text-shadow:0 1px 6px rgba(0,0,0,.9),0 0 8px rgba(0,0,0,.8)}
+.scene-desc{font-size:12.5px;color:rgba(190,215,245,.8);line-height:1.6;
   text-shadow:0 1px 6px rgba(0,0,0,.9),0 0 8px rgba(0,0,0,.8)}
 .glass{background:transparent;border:2px solid rgba(255,255,255,.75);border-radius:22px;
   padding:28px 26px;
@@ -153,7 +156,8 @@ table.sub th:not(:first-child),table.sub td:not(:first-child){text-align:right}
 <div id="sceneWrap" class="scene-wrap" hidden>
   <div class="scene-box">
     <div class="scene-head">
-      <div class="scene-logo">⚖ 변호사시험</div>
+      <div class="scene-logo">변호사시험 대비<span class="ext">.zip</span></div>
+      <div class="scene-tagline">개념학습 &amp; 선택형·사례형·기록형 학습을 한 페이지에서</div>
       <div class="scene-desc" id="sceneDesc"></div>
     </div>
     <div class="glass" id="sceneCard"></div>
@@ -165,7 +169,7 @@ table.sub th:not(:first-child),table.sub td:not(:first-child){text-align:right}
 <div id="hub" hidden>
   <div class="hd">
     <div>
-      <h1>⚖ 변호사시험 통합 학습</h1>
+      <h1>변호사시험 대비<span style="font-weight:400;opacity:.6">.zip</span></h1>
       <div class="sub" id="hdSub">불러오는 중...</div>
     </div>
     <div class="row">
@@ -234,10 +238,28 @@ const sceneDesc = document.getElementById('sceneDesc');
 const sceneNote = document.getElementById('sceneNote');
 const hub = document.getElementById('hub');
 
+// MCQ는 로그인한 ID를 자기 키(`hub_last_uid`)에 저장하고, 다음 방문 때 그 값이
+// 있으면 PIN을 묻지 않고 바로 들어간다. 같은 오리진이라 localStorage는 공유되지만
+// 키 이름이 달라 그냥 두면 허브 로그인과 MCQ 로그인이 서로를 모른다.
+// 두 키를 함께 맞춰 두어, 어느 쪽에서 로그인하든 이어지게 한다.
+const MCQ_UID_KEY = 'hub_last_uid';
+
+function syncUid(uid){
+  try{
+    if(uid) localStorage.setItem(MCQ_UID_KEY, uid);
+    else localStorage.removeItem(MCQ_UID_KEY);
+  }catch(e){ /* 저장소를 못 써도 허브는 계속 뜬다 */ }
+}
+
+function setUser(uid){
+  Store.setUser(uid);
+  syncUid(uid);
+}
+
 const APPS = [
+  { href:'/Core_Notes/',    name:'암기장',  desc:'개념 정리와 쟁점 카드 반복 암기' },
   { href:'/MCQ/',           name:'선택형',  desc:'객관식 문제 풀이와 오답 관리' },
   { href:'/CASE_Practice/', name:'사례형',  desc:'변시·모의 기출 사례형 답안 작성' },
-  { href:'/Core_Notes/',    name:'암기장',  desc:'쟁점 카드 반복 암기' },
   { href:null,              name:'기록형',  desc:'아직 구축되지 않았습니다', off:true },
 ];
 
@@ -278,7 +300,7 @@ function renderLogin(){
   input.type = 'text'; input.className = 'glass-input';
   input.placeholder = '아이디를 입력하세요'; input.autocomplete = 'username';
   const btn = el('button','glass-btn','시작하기');
-  const submit = ()=>{ const v = input.value.trim(); if(!v) return; Store.setUser(v); boot(); };
+  const submit = ()=>{ const v = input.value.trim(); if(!v) return; setUser(v); boot(); };
   btn.addEventListener('click', submit);
   input.addEventListener('keydown', e=>{ if(e.key === 'Enter') submit(); });
   sceneCard.appendChild(input);
@@ -350,7 +372,7 @@ function renderDashboard(records){
   dash.appendChild(tbl);
 }
 
-userBtn.addEventListener('click', ()=>{ Store.setUser(null); boot(); });
+userBtn.addEventListener('click', ()=>{ setUser(null); boot(); });
 document.getElementById('pickBtn').addEventListener('click', ()=>{
   const uid = Store.getUser();
   if(uid) renderPick(uid); else renderLogin();
@@ -370,7 +392,14 @@ async function boot(){
     return;
   }
 
+  // 허브를 거치지 않고 MCQ에서 먼저 로그인했다면 그 ID를 이어받는다
+  if(!uid){
+    let prior = null;
+    try{ prior = localStorage.getItem(MCQ_UID_KEY); }catch(e){}
+    if(prior){ Store.setUser(prior); uid = prior; }
+  }
   if(!uid){ renderLogin(); return; }
+  syncUid(uid);
 
   let records = [];
   try{

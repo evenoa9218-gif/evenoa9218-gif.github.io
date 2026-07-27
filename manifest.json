@@ -1,7 +1,7 @@
 {
-  "name": "변호사시험 통합 학습",
-  "short_name": "변시학습",
-  "description": "선택형·사례형·암기장·기록형을 한 오리진에서 잇는 학습 허브",
+  "name": "변호사시험 대비.zip",
+  "short_name": "변시대비",
+  "description": "개념학습 & 선택형·사례형·기록형 학습을 한 페이지에서",
   "lang": "ko",
   "dir": "ltr",
   "start_url": "/",
@@ -26,8 +26,17 @@
     }
   ],
   "shortcuts": [
-    { "name": "선택형", "url": "/MCQ/" },
-    { "name": "사례형", "url": "/CASE_Practice/" },
-    { "name": "암기장", "url": "/Core_Notes/" }
+    {
+      "name": "암기장",
+      "url": "/Core_Notes/"
+    },
+    {
+      "name": "선택형",
+      "url": "/MCQ/"
+    },
+    {
+      "name": "사례형",
+      "url": "/CASE_Practice/"
+    }
   ]
 }

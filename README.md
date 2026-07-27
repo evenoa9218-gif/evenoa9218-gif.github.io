@@ -42,6 +42,20 @@ GitHub Pages에서 `{계정}.github.io` 이름의 저장소만 사이트 루트(
 허브는 위성 앱과 **같은 IndexedDB(`lawhub` / `records`·`kv`)와 같은 `lawhub_uid`**를 읽는다.
 테마 키는 `lawhub_theme`이고, 없으면 CASE_Practice의 `cp_theme` 값을 물려받는다.
 
+### MCQ 로그인 연동
+
+MCQ는 로그인한 ID를 자기 키인 **`hub_last_uid`**에 저장하고, 다음 방문 때 그 값이 있으면
+PIN을 묻지 않고 바로 들어간다. 같은 오리진이라 `localStorage`는 공유되지만 키 이름이
+`lawhub_uid`와 달라서, 그냥 두면 허브 로그인과 MCQ 로그인이 서로를 모른다.
+
+그래서 허브가 **두 키를 함께 맞춘다.** 허브에서 로그인하면 MCQ도 로그인된 상태가 되고,
+MCQ에서 먼저 로그인했다면 허브가 그 ID를 이어받는다. 로그아웃하면 양쪽 다 지운다.
+
+> **아는 대가**: 이 연동은 MCQ의 PIN 확인을 건너뛴다. 허브에서 아무 ID나 넣으면 그 ID로
+> MCQ에 들어갈 수 있다. MCQ도 원래 같은 기기 재방문 때는 PIN을 묻지 않으므로 완전히
+> 새로운 구멍은 아니지만, **첫 로그인의 PIN 관문이 사라지는 것은 맞다.**
+> 이 방식이 싫다면 `index.html`의 `syncUid()` 호출을 빼면 각 앱이 따로 로그인하게 된다.
+
 ## 서비스워커 스코프
 
 - 스코프는 `/` 전체. 허브 셸(`index.html`, `core/store.js`, `manifest.json`, `icon.svg`)만 precache한다.
