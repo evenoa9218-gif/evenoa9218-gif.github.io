@@ -8,6 +8,11 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon.svg" type="image/svg+xml">
+<!-- Pretendard: 네 앱 공통 본문 폰트. dynamic-subset은 unicode-range로 쪼개져 있어
+     실제로 화면에 쓰인 글자 조각만 내려받는다(한글 전체 폰트는 1MB가 넘는다). -->
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet"
+  href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <title>변호사시험 통합 학습</title>
 <script src="core/store.js"></script>
 <script>
@@ -23,17 +28,18 @@
   --bg:#10192a; --sf:#172238; --sf2:#1d2d48; --bd:#284060; --bd2:#1e3254;
   --gold:#7ab8d8; --gold2:#9acce8; --gf:#2e6282;
   --tx:#cce6f8; --tx2:#6aa8cc; --tx3:#366078;
-  --hd:#0c1424; --ok:#4caf7d; --no:#e2685f; --shadow:0 1px 3px rgba(0,0,0,.4);
+  --hd:#0c1424; --ok:#4ade80; --no:#f87171; --shadow:0 1px 3px rgba(0,0,0,.4);
 }
 :root[data-theme="light"]{
   --bg:#ecf4fb; --sf:#ffffff; --sf2:#dceef8; --bd:#b4d0e8; --bd2:#cce0f2;
   --gold:#2464a0; --gold2:#2e74b5; --gf:#2a5f88;
   --tx:#192233; --tx2:#3a5870; --tx3:#5878a0;
-  --hd:#16233a; --ok:#2e7d55; --no:#c4463c; --shadow:0 1px 3px rgba(30,60,100,.10);
+  --hd:#16233a; --ok:#16a34a; --no:#dc2626; --shadow:0 1px 3px rgba(30,60,100,.10);
 }
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--tx);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif;
+  font-family:'Pretendard Variable',Pretendard,system-ui,-apple-system,
+    "Segoe UI","Malgun Gothic",sans-serif;
   line-height:1.7;-webkit-text-size-adjust:100%}
 .wrap{max-width:1080px;margin:0 auto;padding:16px}
 
@@ -66,19 +72,65 @@ input[type=text]{background:var(--sf);color:var(--tx);border:1px solid var(--bd)
   border-radius:8px;padding:10px 12px;font-size:14px;font-family:inherit}
 input[type=text]:focus{outline:none;border-color:var(--gold)}
 
-/* ── 앱 진입 카드 ───────────────────────────────── */
-.apps{display:grid;gap:11px;margin-bottom:20px}
-@media(min-width:720px){.apps{grid-template-columns:1fr 1fr}}
-.app{display:block;text-decoration:none;color:inherit;
-  background:var(--sf);border:1px solid var(--bd);border-radius:12px;
-  padding:16px 17px;box-shadow:var(--shadow);
-  transition:border-color .12s,transform .12s}
-.app:hover{border-color:var(--gold);transform:translateY(-1px)}
-.app .ico{font-size:22px;line-height:1}
-.app h2{margin:8px 0 3px;font-size:16px;font-weight:700;letter-spacing:-.02em}
-.app p{margin:0;font-size:12.5px;color:var(--tx2);line-height:1.65}
-.app.off{opacity:.5;cursor:default;pointer-events:none}
-.app.off:hover{border-color:var(--bd);transform:none}
+/* ── 로그인·앱선택 장면 (MCQ와 같은 글래스모피즘) ───── */
+/* 배경은 MCQ의 .bg-scene을 그대로 옮겼다. 두 사이트가 같은 화면으로 보여야 한다. */
+.scene{position:fixed;inset:0;z-index:0;overflow:hidden}
+.scene .bg{position:absolute;inset:0;
+  background:
+    radial-gradient(1200px 800px at 18% 12%, rgba(52,96,168,.28), transparent 60%),
+    radial-gradient(1000px 700px at 82% 78%, rgba(122,84,168,.20), transparent 62%),
+    radial-gradient(900px 600px at 60% 20%, rgba(28,72,124,.22), transparent 58%),
+    linear-gradient(160deg,#050a16 0%,#081428 45%,#040a18 100%);
+  animation:bgdrift 32s ease-in-out infinite alternate}
+.scene .veil{position:absolute;inset:0;
+  background:linear-gradient(160deg,rgba(4,12,28,.25) 0%,rgba(8,20,45,.2) 50%,rgba(2,8,20,.3) 100%)}
+@keyframes bgdrift{
+  from{background-position:0% 0%,100% 100%,50% 0%,0 0}
+  to{background-position:12% 8%,88% 92%,42% 10%,0 0}
+}
+@media(prefers-reduced-motion:reduce){.scene .bg{animation:none}}
+
+.scene-wrap{position:relative;z-index:1;min-height:100vh;
+  display:flex;align-items:center;justify-content:center;padding:20px}
+.scene-box{width:100%;max-width:440px}
+.scene-head{text-align:center;margin-bottom:24px}
+.scene-logo{font-size:31px;font-weight:900;color:#fff;margin-bottom:6px;letter-spacing:-.3px;
+  text-shadow:0 0 18px rgba(120,180,255,.7),0 2px 8px rgba(0,0,0,.9)}
+.scene-desc{font-size:13px;color:rgba(230,240,255,.95);line-height:1.6;
+  text-shadow:0 1px 6px rgba(0,0,0,.9),0 0 8px rgba(0,0,0,.8)}
+.glass{background:transparent;border:2px solid rgba(255,255,255,.75);border-radius:22px;
+  padding:28px 26px;
+  box-shadow:0 0 18px rgba(140,190,255,.3),0 0 40px rgba(100,160,255,.15),
+    inset 0 0 18px rgba(140,190,255,.06)}
+.glass-label{font-size:13px;color:#fff;margin-bottom:6px;font-weight:600;letter-spacing:.03em;
+  text-shadow:0 1px 6px rgba(0,0,0,.9)}
+.glass-input{width:100%;box-sizing:border-box;font-family:inherit;font-size:15px;
+  padding:11px 15px;border:1px solid rgba(255,255,255,.55);border-radius:12px;outline:none;
+  background:rgba(255,255,255,.1);color:#fff;margin-bottom:10px;transition:all .18s;
+  box-shadow:0 0 8px rgba(180,210,255,.2)}
+.glass-input::placeholder{color:rgba(200,220,255,.55)}
+.glass-input:focus{border-color:rgba(130,190,255,.9);background:rgba(255,255,255,.15);
+  box-shadow:0 0 0 3px rgba(100,160,255,.15),0 0 12px rgba(130,190,255,.35)}
+.glass-btn{width:100%;padding:13px;background:rgba(100,160,255,.35);color:#fff;
+  border:1px solid rgba(140,190,255,.7);border-radius:12px;
+  font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;
+  box-shadow:0 0 12px rgba(100,160,255,.4),0 4px 16px rgba(60,120,255,.25)}
+.glass-btn:hover{background:rgba(120,175,255,.45)}
+.glass-note{font-size:12px;color:rgba(210,228,255,.75);margin-top:12px;text-align:center;
+  text-shadow:0 1px 5px rgba(0,0,0,.8)}
+
+/* 앱 선택 — MCQ 과목선택 버튼과 같은 반투명 카드 */
+.pick{display:block;width:100%;text-align:left;text-decoration:none;
+  padding:16px 19px;border-radius:12px;margin-bottom:10px;
+  border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);
+  color:rgba(255,255,255,.72);cursor:pointer;font-family:inherit;
+  transition:border-color .15s,background .15s,box-shadow .15s}
+.pick:hover{border-color:rgba(130,190,255,.85);background:rgba(255,255,255,.1);
+  color:#fff;box-shadow:0 0 20px rgba(100,160,255,.3)}
+.pick .t{font-size:15.5px;font-weight:700;letter-spacing:.02em}
+.pick .d{font-size:12.5px;opacity:.62;margin-top:2px;font-weight:400}
+.pick.off{opacity:.42;cursor:default;pointer-events:none}
+.pick .rt{float:right;font-size:11px;opacity:.55;font-weight:400}
 
 /* ── 학습 현황 ──────────────────────────────────── */
 .stats{display:grid;gap:9px}
@@ -96,56 +148,40 @@ table.sub th:not(:first-child),table.sub td:not(:first-child){text-align:right}
 </head>
 <body>
 
-<div class="hd">
-  <div>
-    <h1>⚖ 변호사시험 통합 학습</h1>
-    <div class="sub" id="hdSub">불러오는 중...</div>
-  </div>
-  <div class="row">
-    <button class="btn ghost" id="themeBtn" title="테마 전환">🌙</button>
-    <button class="btn ghost" id="userBtn" hidden>나가기</button>
+<!-- 로그인 / 앱선택 — MCQ와 같은 배경 위의 투명창 -->
+<div id="scene" class="scene" hidden><div class="bg"></div><div class="veil"></div></div>
+<div id="sceneWrap" class="scene-wrap" hidden>
+  <div class="scene-box">
+    <div class="scene-head">
+      <div class="scene-logo">⚖ 변호사시험</div>
+      <div class="scene-desc" id="sceneDesc"></div>
+    </div>
+    <div class="glass" id="sceneCard"></div>
+    <div class="glass-note" id="sceneNote"></div>
   </div>
 </div>
 
-<div class="wrap">
-
-  <!-- 앱 진입 -->
-  <div class="apps">
-    <a class="app" href="/MCQ/">
-      <div class="ico">📝</div>
-      <h2>선택형 <span class="tag gold">MCQ</span></h2>
-      <p>객관식 문제 풀이와 오답 관리</p>
-    </a>
-    <a class="app" href="/CASE_Practice/">
-      <div class="ico">📄</div>
-      <h2>사례형 <span class="tag gold">CASE</span></h2>
-      <p>변시·모의 기출 사례형 답안 작성</p>
-    </a>
-    <a class="app" href="/Core_Notes/">
-      <div class="ico">🗂</div>
-      <h2>암기장 <span class="tag gold">NOTES</span></h2>
-      <p>쟁점 카드 반복 암기</p>
-    </a>
-    <div class="app off" aria-disabled="true">
-      <div class="ico">✍</div>
-      <h2>기록형 <span class="tag">준비 중</span></h2>
-      <p>아직 구축되지 않았습니다</p>
+<!-- 대시보드 -->
+<div id="hub" hidden>
+  <div class="hd">
+    <div>
+      <h1>⚖ 변호사시험 통합 학습</h1>
+      <div class="sub" id="hdSub">불러오는 중...</div>
+    </div>
+    <div class="row">
+      <button class="btn ghost" id="pickBtn" title="앱 선택으로">앱 선택</button>
+      <button class="btn ghost" id="themeBtn" title="테마 전환">🌙</button>
+      <button class="btn ghost" id="userBtn" hidden>나가기</button>
     </div>
   </div>
 
-  <!-- 학습 현황 -->
-  <div class="card">
-    <div class="title">학습 현황</div>
-    <div id="dash"><div class="muted">집계 중...</div></div>
+  <div class="wrap">
+    <div class="card">
+      <div class="title">학습 현황</div>
+      <div id="dash"><div class="muted">집계 중...</div></div>
+    </div>
+    <div class="muted" style="text-align:center;padding:8px 0 24px" id="swNote"></div>
   </div>
-
-  <!-- 사용자 -->
-  <div class="card" id="userCard" hidden>
-    <div class="title">사용자</div>
-    <div id="userBody"></div>
-  </div>
-
-  <div class="muted" style="text-align:center;padding:8px 0 24px" id="swNote"></div>
 </div>
 
 <script>
@@ -186,12 +222,70 @@ themeBtn.addEventListener('click', ()=>{
 });
 paintTheme();
 
-// ── 대시보드 ─────────────────────────────────────
+// ── 화면 ─────────────────────────────────────────
+// login → pick(앱 선택) → hub(대시보드). 앞의 둘은 MCQ와 같은 투명창이다.
 const dash = document.getElementById('dash');
 const hdSub = document.getElementById('hdSub');
-const userCard = document.getElementById('userCard');
-const userBody = document.getElementById('userBody');
 const userBtn = document.getElementById('userBtn');
+const scene = document.getElementById('scene');
+const sceneWrap = document.getElementById('sceneWrap');
+const sceneCard = document.getElementById('sceneCard');
+const sceneDesc = document.getElementById('sceneDesc');
+const sceneNote = document.getElementById('sceneNote');
+const hub = document.getElementById('hub');
+
+const APPS = [
+  { href:'/MCQ/',           name:'선택형',  desc:'객관식 문제 풀이와 오답 관리' },
+  { href:'/CASE_Practice/', name:'사례형',  desc:'변시·모의 기출 사례형 답안 작성' },
+  { href:'/Core_Notes/',    name:'암기장',  desc:'쟁점 카드 반복 암기' },
+  { href:null,              name:'기록형',  desc:'아직 구축되지 않았습니다', off:true },
+];
+
+function showScene(kind){
+  const onScene = kind !== 'hub';
+  scene.hidden = sceneWrap.hidden = !onScene;
+  hub.hidden = onScene;
+  // 장면 화면은 어두운 배경 위에 얹히므로 테마와 무관하게 배경을 어둡게 둔다
+  document.body.style.background = onScene ? '#050a16' : '';
+}
+
+function renderPick(uid){
+  showScene('pick');
+  sceneDesc.textContent = uid + ' 님 · 학습할 유형을 고르세요';
+  sceneCard.textContent = '';
+  for(const a of APPS){
+    const node = a.off ? el('div','pick off') : document.createElement('a');
+    if(!a.off){ node.className = 'pick'; node.href = a.href; }
+    const t = el('div','t', a.name);
+    if(a.off) t.appendChild(el('span','rt','준비 중'));
+    node.appendChild(t);
+    node.appendChild(el('div','d', a.desc));
+    sceneCard.appendChild(node);
+  }
+  const more = el('button','glass-btn','학습 현황 보기');
+  more.style.marginTop = '6px';
+  more.addEventListener('click', ()=>{ showScene('hub'); });
+  sceneCard.appendChild(more);
+  sceneNote.textContent = '네 앱이 같은 기록을 공유합니다 · 답안 전문은 기기 밖으로 나가지 않습니다';
+}
+
+function renderLogin(){
+  showScene('login');
+  sceneDesc.textContent = '선택형 · 사례형 · 암기장 · 기록형을 한 곳에서';
+  sceneCard.textContent = '';
+  sceneCard.appendChild(el('div','glass-label','사용자 ID'));
+  const input = document.createElement('input');
+  input.type = 'text'; input.className = 'glass-input';
+  input.placeholder = '아이디를 입력하세요'; input.autocomplete = 'username';
+  const btn = el('button','glass-btn','시작하기');
+  const submit = ()=>{ const v = input.value.trim(); if(!v) return; Store.setUser(v); boot(); };
+  btn.addEventListener('click', submit);
+  input.addEventListener('keydown', e=>{ if(e.key === 'Enter') submit(); });
+  sceneCard.appendChild(input);
+  sceneCard.appendChild(btn);
+  sceneNote.textContent = '네 앱이 같은 사용자 ID를 공유합니다 · 이 기기에만 저장됩니다';
+  input.focus();
+}
 
 // 과목별 학습량 집계 — 푼 문제 수 · 총 학습시간 · 최근 학습일
 function aggregate(records){
@@ -220,7 +314,7 @@ function renderDashboard(records){
   dash.textContent = '';
   if(!records.length){
     const e = el('div','empty','아직 학습 기록이 없습니다');
-    e.appendChild(el('div','muted','위 앱에서 문제를 풀면 여기에 과목별 학습량이 쌓입니다.'));
+    e.appendChild(el('div','muted','앱에서 문제를 풀면 여기에 과목별 학습량이 쌓입니다.'));
     dash.appendChild(e);
     return;
   }
@@ -256,43 +350,11 @@ function renderDashboard(records){
   dash.appendChild(tbl);
 }
 
-function renderSignedOut(msg){
-  dash.textContent = '';
-  const e = el('div','empty', msg || '사용자를 설정하면 학습 현황이 표시됩니다');
-  dash.appendChild(e);
-}
-
-// ── 사용자 ───────────────────────────────────────
-function renderUser(uid){
-  userCard.hidden = false;
-  userBody.textContent = '';
-  if(uid){
-    const row = el('div','row');
-    row.appendChild(el('span','tag ok', uid));
-    row.appendChild(el('span','muted','이 기기에 저장됩니다 · 답안 전문은 기기 밖으로 나가지 않습니다'));
-    userBody.appendChild(row);
-    userBtn.hidden = false;
-  }else{
-    const row = el('div','row');
-    const input = document.createElement('input');
-    input.type = 'text'; input.placeholder = '사용자 ID'; input.style.flex = '1 1 180px';
-    const btn = el('button','btn pri','시작하기');
-    const submit = ()=>{
-      const v = input.value.trim();
-      if(!v) return;
-      Store.setUser(v);
-      boot();
-    };
-    btn.addEventListener('click', submit);
-    input.addEventListener('keydown', e=>{ if(e.key === 'Enter') submit(); });
-    row.appendChild(input); row.appendChild(btn);
-    userBody.appendChild(row);
-    userBody.appendChild(el('div','muted','네 앱이 같은 사용자 ID를 공유합니다.'));
-    userBtn.hidden = true;
-  }
-}
-
 userBtn.addEventListener('click', ()=>{ Store.setUser(null); boot(); });
+document.getElementById('pickBtn').addEventListener('click', ()=>{
+  const uid = Store.getUser();
+  if(uid) renderPick(uid); else renderLogin();
+});
 
 // ── 부팅 ─────────────────────────────────────────
 async function boot(){
@@ -301,18 +363,14 @@ async function boot(){
     const st = await Store.init({});
     uid = st.uid;
   }catch(e){
+    showScene('hub');
     hdSub.textContent = '저장소를 열 수 없습니다';
-    renderSignedOut('브라우저 저장소를 사용할 수 없어 학습 현황을 표시할 수 없습니다');
-    userCard.hidden = true;
+    dash.textContent = '';
+    dash.appendChild(el('div','empty','브라우저 저장소를 사용할 수 없어 학습 현황을 표시할 수 없습니다'));
     return;
   }
 
-  renderUser(uid);
-  if(!uid){
-    hdSub.textContent = '사용자 미설정';
-    renderSignedOut();
-    return;
-  }
+  if(!uid){ renderLogin(); return; }
 
   let records = [];
   try{
@@ -321,7 +379,9 @@ async function boot(){
     records = [];   // 기록을 못 읽어도 허브는 떠 있어야 한다
   }
   hdSub.textContent = `${uid} · 기록 ${records.length}건`;
+  userBtn.hidden = false;
   renderDashboard(records);
+  renderPick(uid);   // 로그인 상태의 첫 화면은 앱 선택
 }
 
 boot();
