@@ -157,7 +157,7 @@ table.sub th:not(:first-child),table.sub td:not(:first-child){text-align:right}
   <div class="scene-box">
     <div class="scene-head">
       <div class="scene-logo">변호사시험 대비<span class="ext">.zip</span></div>
-      <div class="scene-tagline">개념학습 &amp; 선택형·사례형·기록형 학습을 한 페이지에서</div>
+      <div class="scene-tagline">개념학습 &amp; 선택형·사례형·기록형 학습을 한 곳에서</div>
       <div class="scene-desc" id="sceneDesc"></div>
     </div>
     <div class="glass" id="sceneCard"></div>
@@ -273,6 +273,7 @@ function showScene(kind){
 
 function renderPick(uid){
   showScene('pick');
+  sceneDesc.hidden = false;
   sceneDesc.textContent = uid + ' 님 · 학습할 유형을 고르세요';
   sceneCard.textContent = '';
   for(const a of APPS){
@@ -293,7 +294,8 @@ function renderPick(uid){
 
 function renderLogin(){
   showScene('login');
-  sceneDesc.textContent = '선택형 · 사례형 · 암기장 · 기록형을 한 곳에서';
+  // 로그인 화면에서는 부제만 둔다 — 여기에 한 줄 더 넣으면 같은 말이 두 번 나온다
+  sceneDesc.hidden = true;
   sceneCard.textContent = '';
   sceneCard.appendChild(el('div','glass-label','사용자 ID'));
   const input = document.createElement('input');
