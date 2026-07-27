@@ -82,16 +82,19 @@ input[type=text]:focus{outline:none;border-color:var(--gold)}
 .scene-box{width:100%;max-width:440px}
 .scene-head{text-align:center;margin-bottom:24px}
 .scene-logo{font-size:31px;font-weight:900;color:#fff;margin-bottom:7px;letter-spacing:-.3px;
-  text-shadow:0 0 18px rgba(120,180,255,.7),0 2px 8px rgba(0,0,0,.9)}
+  text-shadow:0 0 14px rgba(150,200,255,.85),0 0 34px rgba(100,160,255,.45),
+    0 2px 8px rgba(0,0,0,.9)}
 .scene-logo .ext{font-weight:400;opacity:.6;letter-spacing:0}
 .scene-tagline{font-size:13.5px;color:rgba(220,235,255,.92);line-height:1.6;margin-bottom:6px;
   word-break:keep-all;text-shadow:0 1px 6px rgba(0,0,0,.9),0 0 8px rgba(0,0,0,.8)}
 .scene-desc{font-size:12.5px;color:rgba(190,215,245,.8);line-height:1.6;
   text-shadow:0 1px 6px rgba(0,0,0,.9),0 0 8px rgba(0,0,0,.8)}
-.glass{background:transparent;border:2px solid rgba(255,255,255,.75);border-radius:22px;
+/* 바깥 테두리는 검은 배경에서 스스로 빛나 보여야 한다 — 안팎으로 번지는
+   푸른 글로우를 겹쳐 얹는다(사진 배경일 때보다 조금 세게). */
+.glass{background:transparent;border:2px solid rgba(255,255,255,.88);border-radius:22px;
   padding:28px 26px;
-  box-shadow:0 0 18px rgba(140,190,255,.3),0 0 40px rgba(100,160,255,.15),
-    inset 0 0 18px rgba(140,190,255,.06)}
+  box-shadow:0 0 24px rgba(150,200,255,.45),0 0 60px rgba(100,160,255,.26),
+    inset 0 0 24px rgba(140,190,255,.1)}
 .glass-label{font-size:13px;color:#fff;margin-bottom:6px;font-weight:600;letter-spacing:.03em;
   text-shadow:0 1px 6px rgba(0,0,0,.9)}
 .glass-input{width:100%;box-sizing:border-box;font-family:inherit;font-size:15px;
@@ -104,21 +107,28 @@ input[type=text]:focus{outline:none;border-color:var(--gold)}
 .glass-btn{width:100%;padding:13px;background:rgba(100,160,255,.35);color:#fff;
   border:1px solid rgba(140,190,255,.7);border-radius:12px;
   font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .18s;
-  box-shadow:0 0 12px rgba(100,160,255,.4),0 4px 16px rgba(60,120,255,.25)}
-.glass-btn:hover{background:rgba(120,175,255,.45)}
+  text-shadow:0 0 10px rgba(180,215,255,.55);
+  box-shadow:0 0 18px rgba(110,170,255,.5),0 4px 16px rgba(60,120,255,.3)}
+.glass-btn:hover{background:rgba(120,175,255,.45);
+  box-shadow:0 0 26px rgba(130,185,255,.62),0 4px 18px rgba(60,120,255,.35)}
 .glass-note{font-size:12px;color:rgba(210,228,255,.75);margin-top:12px;text-align:center;
   text-shadow:0 1px 5px rgba(0,0,0,.8)}
 
-/* 앱 선택 — MCQ 과목선택 버튼과 같은 반투명 카드 */
+/* 앱 선택 — MCQ 과목선택 버튼과 같은 반투명 카드.
+   MCQ는 고른 것만 테두리를 밝혔지만 여기서는 넷 다 고를 대상이라
+   기본 상태부터 또렷하게 두고, 가리킨 것만 더 밝아지게 한다. */
 .pick{display:block;width:100%;text-align:left;text-decoration:none;
   padding:16px 19px;border-radius:12px;margin-bottom:10px;
-  border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);
-  color:rgba(255,255,255,.72);cursor:pointer;font-family:inherit;
-  transition:border-color .15s,background .15s,box-shadow .15s}
-.pick:hover{border-color:rgba(130,190,255,.85);background:rgba(255,255,255,.1);
-  color:#fff;box-shadow:0 0 20px rgba(100,160,255,.3)}
-.pick .t{font-size:15.5px;font-weight:700;letter-spacing:.02em}
-.pick .d{font-size:12.5px;opacity:.62;margin-top:2px;font-weight:400}
+  border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.06);
+  color:rgba(255,255,255,.9);cursor:pointer;font-family:inherit;
+  box-shadow:0 0 14px rgba(130,185,255,.2),inset 0 0 16px rgba(140,190,255,.05);
+  transition:border-color .15s,background .15s,box-shadow .15s,color .15s}
+.pick:hover{border-color:rgba(160,205,255,.95);background:rgba(255,255,255,.12);
+  color:#fff;box-shadow:0 0 28px rgba(120,180,255,.5),inset 0 0 20px rgba(140,190,255,.12)}
+.pick .t{font-size:15.5px;font-weight:700;letter-spacing:.02em;
+  text-shadow:0 0 12px rgba(150,200,255,.5),0 1px 4px rgba(0,0,0,.8)}
+.pick .d{font-size:12.5px;opacity:.7;margin-top:2px;font-weight:400;
+  text-shadow:0 1px 4px rgba(0,0,0,.8)}
 .pick.off{opacity:.42;cursor:default;pointer-events:none}
 .pick .rt{float:right;font-size:11px;opacity:.55;font-weight:400}
 
