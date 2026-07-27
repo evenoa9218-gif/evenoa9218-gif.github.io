@@ -1,13 +1,23 @@
 # -*- coding: utf-8 -*-
 """배경 사진을 WebP로 줄여 assets/bg/에 넣는다.
 
-    python -X utf8 tools/make_bg.py 사진1.jpg 사진2.jpg ...
+    python -X utf8 tools/make_bg.py [--start N] 사진1.jpg 사진2.jpg ...
 
-원본 순서대로 1.webp, 2.webp … 로 저장한다. index.html의 BG_PHOTOS가
-이 파일명을 가리킨다.
+`--start`는 첫 출력 번호(기본 1). 순서대로 N.webp, N+1.webp … 로 저장한다.
+index.html의 BG_PHOTOS가 이 파일명을 가리킨다.
 
-배경 사진은 화면 전체에 깔리므로 폭 1920px이면 충분하다. 그보다 큰 원본은
-줄인다 — 4000px짜리를 그대로 올리면 보이지도 않는 화소에 몇 MB를 쓴다.
+## 크기를 이렇게 잡은 이유
+
+처음엔 폭 1920·품질 72로 줄였는데 **눈에 띄게 뭉개졌다.** 두 가지가 겹쳤다.
+
+- 요즘 화면은 픽셀 밀도가 1을 넘는다(DPR 1.5~2). CSS 폭 1600짜리 창이라도
+  물리 화소는 2400~3200이라, 1920 원본을 늘려 그리게 된다.
+- 밤하늘은 어두운 부분의 미세한 밝기 차가 화면의 거의 전부다. 품질을 낮추면
+  그 미묘한 계조가 제일 먼저 뭉개져 띠(밴딩)와 얼룩으로 보인다.
+  어두우니 대충 줄여도 된다고 생각했는데 반대였다.
+
+높이 상한을 두는 것은 세로로 긴 사진 때문이다. 가로 화면에 `cover`로 깔면
+위아래는 어차피 잘려 보이지 않는데, 파일 크기는 그대로 낸다.
 """
 import sys
 from pathlib import Path
@@ -19,16 +29,22 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'assets' / 'bg'
-MAX_W = 1920
-QUALITY = 72          # 밤하늘은 어두워서 이 정도로 낮춰도 눈에 띄지 않는다
+MAX_W = 2560
+MAX_H = 2200          # 넘는 만큼은 가운데를 남기고 잘라낸다
+QUALITY = 86
 
 
-def main(paths):
-    if not paths:
+def main(argv):
+    start = 1
+    if len(argv) >= 2 and argv[0] == '--start':
+        start = int(argv[1])
+        argv = argv[2:]
+    if not argv:
         sys.exit(__doc__)
+
     OUT.mkdir(parents=True, exist_ok=True)
-    total = 0
-    for i, p in enumerate(paths, 1):
+    total, names = 0, []
+    for i, p in enumerate(argv, start):
         src = Path(p)
         if not src.exists():
             print('  건너뜀 (없는 파일): %s' % src)
@@ -37,16 +53,20 @@ def main(paths):
         if im.mode not in ('RGB', 'L'):
             im = im.convert('RGB')
         if im.width > MAX_W:
-            h = round(im.height * MAX_W / im.width)
-            im = im.resize((MAX_W, h), Image.LANCZOS)
+            im = im.resize((MAX_W, round(im.height * MAX_W / im.width)),
+                           Image.LANCZOS)
+        if im.height > MAX_H:
+            top = (im.height - MAX_H) // 2
+            im = im.crop((0, top, im.width, top + MAX_H))
         dst = OUT / ('%d.webp' % i)
         im.save(dst, 'WEBP', quality=QUALITY, method=6)
         kb = dst.stat().st_size / 1024
         total += kb
-        print('  %-40s → %s  %6.0f KB  (%dx%d)'
+        names.append(dst.name)
+        print('  %-44s → %-8s %6.0f KB  (%dx%d)'
               % (src.name, dst.name, kb, im.width, im.height))
     print('합계 %.0f KB' % total)
-    print('index.html의 BG_PHOTOS 배열이 %d장을 가리키는지 확인할 것.' % len(paths))
+    print('index.html의 BG_PHOTOS가 %s를 가리키는지 확인할 것.' % ', '.join(names))
 
 
 if __name__ == '__main__':

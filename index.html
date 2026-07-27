@@ -88,14 +88,14 @@ input[type=text]:focus{outline:none;border-color:var(--gold)}
 .scene .photo.on{opacity:1}
 .scene .veil{position:absolute;inset:0;
   background:linear-gradient(160deg,rgba(4,12,28,.25) 0%,rgba(8,20,45,.2) 50%,rgba(2,8,20,.3) 100%)}
-/* 사진이 깔리면 더 짙게 덮는다. 밝은 밤하늘 사진에서는 그라디언트용으로 잡은
-   옅은 베일로는 흰 글씨가 묻힌다. 가운데(카드 자리)를 특히 어둡게 두고
-   가장자리는 사진이 살아 있게 남긴다. */
+/* 사진이 깔리면 글씨가 놓이는 가운데만 어둡게 눌러 준다.
+   색이 있는 베일(남색)을 화면 전체에 씌우면 사진 색감이 통째로 바뀌므로
+   중립 검정만 쓴다. 가장자리는 거의 덮지 않아 원래 색이 그대로 보인다. */
 .scene.has-photo .veil{
   background:
-    radial-gradient(880px 620px at 50% 52%,
-      rgba(2,8,20,.74) 0%, rgba(2,8,20,.46) 62%, rgba(2,8,20,.34) 100%),
-    linear-gradient(160deg,rgba(4,12,28,.48) 0%,rgba(8,20,45,.4) 50%,rgba(2,8,20,.52) 100%)}
+    radial-gradient(760px 520px at 50% 50%,
+      rgba(0,0,0,.6) 0%, rgba(0,0,0,.28) 62%, rgba(0,0,0,.1) 100%),
+    linear-gradient(180deg,rgba(0,0,0,.2) 0%,rgba(0,0,0,.1) 45%,rgba(0,0,0,.26) 100%)}
 @keyframes bgdrift{
   from{background-position:0% 0%,100% 100%,50% 0%,0 0}
   to{background-position:12% 8%,88% 92%,42% 10%,0 0}
