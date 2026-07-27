@@ -88,6 +88,14 @@ input[type=text]:focus{outline:none;border-color:var(--gold)}
 .scene .photo.on{opacity:1}
 .scene .veil{position:absolute;inset:0;
   background:linear-gradient(160deg,rgba(4,12,28,.25) 0%,rgba(8,20,45,.2) 50%,rgba(2,8,20,.3) 100%)}
+/* 사진이 깔리면 더 짙게 덮는다. 밝은 밤하늘 사진에서는 그라디언트용으로 잡은
+   옅은 베일로는 흰 글씨가 묻힌다. 가운데(카드 자리)를 특히 어둡게 두고
+   가장자리는 사진이 살아 있게 남긴다. */
+.scene.has-photo .veil{
+  background:
+    radial-gradient(880px 620px at 50% 52%,
+      rgba(2,8,20,.74) 0%, rgba(2,8,20,.46) 62%, rgba(2,8,20,.34) 100%),
+    linear-gradient(160deg,rgba(4,12,28,.48) 0%,rgba(8,20,45,.4) 50%,rgba(2,8,20,.52) 100%)}
 @keyframes bgdrift{
   from{background-position:0% 0%,100% 100%,50% 0%,0 0}
   to{background-position:12% 8%,88% 92%,42% 10%,0 0}
@@ -266,6 +274,7 @@ function paintBackdrop(){
   img.onload = ()=>{
     layer.style.backgroundImage = 'url("' + pick + '")';
     layer.classList.add('on');
+    document.getElementById('scene').classList.add('has-photo');
   };
   img.onerror = ()=>{ /* 사진이 없으면 그라디언트로 둔다 */ };
   img.src = pick;
