@@ -9,7 +9,7 @@ evenoa9218-gif.github.io/
 ├── /MCQ/                선택형
 ├── /CASE_Practice/      사례형
 ├── /Core_Notes/         암기장
-└── /RECORD/             기록형 (준비 중)
+└── /RECORD_Practice/    기록형
 ```
 
 설계 규약 전체는 `CASE_Practice/docs/ARCHITECTURE.md`에 있다.
@@ -59,7 +59,7 @@ MCQ에서 먼저 로그인했다면 허브가 그 ID를 이어받는다. 로그�
 ## 서비스워커 스코프
 
 - 스코프는 `/` 전체. 허브 셸(`index.html`, `core/store.js`, `manifest.json`, `icon.svg`)만 precache한다.
-- 위성 앱(`/MCQ/`, `/CASE_Practice/`, `/Core_Notes/`, `/RECORD/`)은 런타임 캐시.
+- 위성 앱(`/MCQ/`, `/CASE_Practice/`, `/Core_Notes/`, `/RECORD_Practice/`)은 런타임 캐시.
   네트워크를 먼저 쓰고 오프라인일 때만 캐시가 답한다 — 위성 앱 배포를 캐시가 붙잡지 않게 하려는 것.
 - **`data/*.json`은 precache하지 않는다.** 수 MB 규모라 첫 방문에 수십 MB를 받게 되기 때문이다.
   런타임 network-first 캐시만 적용한다.

@@ -3,7 +3,7 @@
  *
  * 캐시 전략:
  *   허브 셸 (index.html, core/store.js, manifest.json, icon.svg)  precache + SWR
- *   위성앱 (/MCQ/, /CASE_Practice/, /Core_Notes/, /RECORD/)       런타임 stale-while-revalidate
+ *   위성앱 (/MCQ/, /CASE_Practice/, /Core_Notes/, /RECORD_Practice/)       런타임 stale-while-revalidate
  *   data/*.json (수 MB)                                          런타임 network-first만. precache 금지
  *
  * 범위 충돌 주의:
@@ -14,7 +14,7 @@
  */
 'use strict';
 
-const VERSION = 'v2';
+const VERSION = 'v3';
 const SHELL_CACHE   = `lawhub-shell-${VERSION}`;
 const RUNTIME_CACHE = `lawhub-runtime-${VERSION}`;
 const DATA_CACHE    = `lawhub-data-${VERSION}`;
@@ -23,7 +23,7 @@ const KEEP = new Set([SHELL_CACHE, RUNTIME_CACHE, DATA_CACHE]);
 // 허브 자신의 셸만 precache한다. 위성앱·데이터는 절대 넣지 않는다.
 const SHELL = ['./', './index.html', './core/store.js', './manifest.json', './icon.svg'];
 
-const SATELLITE_RE = /^\/(MCQ|CASE_Practice|Core_Notes|RECORD)\//;
+const SATELLITE_RE = /^\/(MCQ|CASE_Practice|Core_Notes|RECORD_Practice)\//;
 const isDataJson = (p) => p.includes('/data/') && p.endsWith('.json');
 
 // ── install ──────────────────────────────────────

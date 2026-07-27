@@ -37,6 +37,10 @@
     {
       "name": "사례형",
       "url": "/CASE_Practice/"
+    },
+    {
+      "name": "기록형",
+      "url": "/RECORD_Practice/"
     }
   ]
 }
