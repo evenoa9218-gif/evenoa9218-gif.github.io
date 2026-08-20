@@ -271,7 +271,8 @@ function showScene(kind){
 function renderPick(uid){
   showScene('pick');
   sceneDesc.hidden = false;
-  sceneDesc.textContent = uid + ' 님 · 학습할 유형을 고르세요';
+  // uid 가 없을 수 있다 — 저장소가 막혀 이름을 못 읽은 경우다. 「 님」이 뜨지 않게 한다.
+  sceneDesc.textContent = uid ? (uid + ' 님 · 학습할 유형을 고르세요') : '학습할 유형을 고르세요';
   sceneCard.textContent = '';
   for(const a of APPS){
     const node = a.off ? el('div','pick off') : document.createElement('a');
@@ -373,9 +374,16 @@ function renderDashboard(records){
 
 userBtn.addEventListener('click', ()=>{ setUser(null); boot(); });
 document.getElementById('pickBtn').addEventListener('click', ()=>{
-  const uid = Store.getUser();
-  if(uid) renderPick(uid); else renderLogin();
+  // 저장소가 막힌 상태에서는 Store.getUser() 가 던지거나 빈 값을 준다.
+  // 그렇다고 앱 선택을 막으면 앱에 아예 못 들어간다 — 이름 없이라도 보여준다.
+  let uid = null;
+  try{ uid = Store.getUser(); }catch(e){}
+  if(uid) renderPick(uid);
+  else if(storageBlocked) renderPick('');
+  else renderLogin();
 });
+
+let storageBlocked = false;
 
 // ── 부팅 ─────────────────────────────────────────
 async function boot(){
@@ -384,10 +392,14 @@ async function boot(){
     const st = await Store.init({});
     uid = st.uid;
   }catch(e){
+    // 저장소가 막혀도(사생활 보호 모드·쿠키 차단) **앱으로 넘어가는 길은 막지 않는다.**
+    // 학습 현황만 못 보여줄 뿐, 네 앱은 그대로 쓸 수 있어야 한다.
+    storageBlocked = true;
     showScene('hub');
-    hdSub.textContent = '저장소를 열 수 없습니다';
+    hdSub.textContent = '학습 현황을 저장할 수 없는 상태입니다';
     dash.textContent = '';
-    dash.appendChild(el('div','empty','브라우저 저장소를 사용할 수 없어 학습 현황을 표시할 수 없습니다'));
+    dash.appendChild(el('div','empty',
+      '브라우저 저장소가 막혀 있어 학습 현황은 표시되지 않습니다. 위 「앱 선택」으로 각 앱은 그대로 쓸 수 있습니다.'));
     return;
   }
 
