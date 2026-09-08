@@ -13,7 +13,8 @@ SRC   = r'C:\Users\82109\Desktop\KakaoTalk_20260908_182424094_01.png'
 CX,CY = 511, 501      # 금색 그림의 중심(실측)
 INNER = 272           # 타일 둥근 모서리에 안 걸리는 최대 반변
 CANVAS= 640           # 최종 정사각 — 원본 타일의 여백 비율에 맞춘 값
-CREAM = (232, 226, 217)
+CREAM  = (232, 226, 217)   # 원본 바탕(평탄화 기준)
+PAPER  = (246, 244, 240)   # 최종 바탕 — 원본보다 흰 톤
 
 def source_square():
     im = Image.open(SRC).convert('RGB')
@@ -23,10 +24,17 @@ def source_square():
     flat[(a[:,:,0]-a[:,:,2]) > 22] = cream                     # 금색을 덮고
     bg = np.asarray(Image.fromarray(flat.astype(np.uint8))
                     .filter(ImageFilter.GaussianBlur(70))).astype(np.float32)
-    even = np.clip(a + (cream - bg), 0, 255).astype(np.uint8)  # 배경을 평탄화
+    even = np.clip(a + (cream - bg), 0, 255)                   # 배경을 평탄화
+
+    # 바탕만 흰 톤으로 올린다. 전체를 그냥 밝히면 금색까지 떠서 색이 바랜다.
+    # 「금색인 정도」로 가중해 더하면 바탕은 올라가고 금색은 제자리에 남는다.
+    warmth = even[:,:,0] - even[:,:,2]
+    alpha  = np.clip((warmth - 10) / 40.0, 0, 1)[:,:,None]     # 0=바탕, 1=금색
+    even = np.clip(even + (np.array(PAPER, np.float32) - cream) * (1 - alpha), 0, 255)
+    even = even.astype(np.uint8)
     inner = Image.fromarray(even).crop((CX-INNER, CY-INNER, CX+INNER, CY+INNER))
 
-    out = Image.new('RGB', (CANVAS, CANVAS), CREAM)
+    out = Image.new('RGB', (CANVAS, CANVAS), PAPER)
     m = Image.new('L', (2*INNER, 2*INNER), 0)
     ImageDraw.Draw(m).rectangle([22, 22, 2*INNER-23, 2*INNER-23], fill=255)
     m = m.filter(ImageFilter.GaussianBlur(11))                 # 이음매가 안 보이게
@@ -39,13 +47,13 @@ def make(base, path, size, scale=1.0):
         img = base
     else:                                                      # 안드로이드 원형 마스크용
         s = int(base.size[0]*scale)
-        img = Image.new('RGB', base.size, CREAM)
+        img = Image.new('RGB', base.size, PAPER)
         img.paste(base.resize((s,s), Image.LANCZOS), ((base.size[0]-s)//2,)*2)
     img.resize((size,size), Image.LANCZOS).save(path, optimize=True)
     print(f'  {path}  {size}x{size}')
 
 if __name__ == '__main__':
     b = source_square()
-    b.save('_preview.png')
     make(b,'apple-touch-icon.png',180); make(b,'icon-192.png',192)
+    make(b,'icon-256.png',256)        # 파비콘
     make(b,'icon-512.png',512);        make(b,'icon-maskable-512.png',512,.80)
