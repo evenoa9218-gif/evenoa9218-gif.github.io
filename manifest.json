@@ -10,7 +10,7 @@
   "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#ecf4fb",
-  "background_color": "#ecf4fb",
+  "background_color": "#e8e2d9",
   "icons": [
     {
       "src": "/icon-192.png",
@@ -29,12 +29,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "/icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any"
     }
   ],
   "shortcuts": [
