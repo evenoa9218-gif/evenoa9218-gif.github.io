@@ -37,6 +37,38 @@ GitHub Pages에서 `{계정}.github.io` 이름의 저장소만 사이트 루트(
 | `core/store.js` | 저장 추상화 레이어. **정본은 `CASE_Practice/core/store.js`** — 여기 것은 복사본이다 |
 | `sw.js` | 공용 서비스워커 |
 | `manifest.json`, `icon.svg` | PWA 매니페스트와 아이콘 |
+| `feedback.js` | **모든 앱 공용 「의견 보내기」 위젯.** 여기 한 벌만 두고 각 앱이 `/feedback.js` 로 불러 쓴다 |
+| `feedback-admin.html` | 의견함(관리자용). 들어온 의견을 읽고 읽음·처리함을 표시한다 |
+
+## 의견함
+
+앱 오른쪽 아래 「의견」 단추 → 채점 워커의 `/feedback` → D1(`grade-usage` 의 `feedback` 표).
+
+```html
+<script src="/feedback.js?v=1" defer data-app="CASE"></script>
+```
+
+| 속성 | 뜻 |
+|---|---|
+| `data-app` | `HUB` · `MCQ` · `CASE` · `RECORD` · `NOTES` · `ETHICS` — 워커가 이 목록만 받는다 |
+| `data-button="off"` | 단추를 안 띄운다. 앱이 제 창구를 갖고 있을 때(MCQ 의 문항별 피드백) — `window.LawFeedback.send({kind, text, ctx})` 로 글만 흘려보낸다 |
+| `data-bottom="76"` | 단추를 바닥에서 띄울 높이(px). 바닥 탭바가 있는 앱(율리)용 |
+
+**읽는 법은 둘이다.**
+
+- 터미널: `CASE_Practice/worker` 에서 `npm run feedback` (새 것만) · `npm run feedback -- all` ·
+  `npm run feedback -- done 12 "무엇을 고쳤는지"`. wrangler 로그인이 열쇠라 따로 넣을 것이 없다.
+- 브라우저: `/feedback-admin.html`. 워커에 관리자 열쇠가 있어야 열린다 —
+  `npx wrangler secret put FEEDBACK_ADMIN_KEY` (값은 넣는 사람만 안다. 저장소에 적지 않는다).
+
+**알아 둘 것**
+
+- 위젯은 **그림자 DOM** 안에 그린다. 앱마다 전역 CSS 가 달라(`textarea{min-height:300px}` 등) 그냥 붙이면 덮어쓰인다.
+- 위젯은 글자판 이벤트를 밖으로 내보내지 않는다. 그림자 DOM 밖에서는 `e.target` 이 껍데기 `div` 로 보여
+  앱 단축키가 「입력 중」인 줄 모르고 먹기 때문이다.
+- 함께 가는 것은 **화면 주소·눈에 보이는 제목 몇 줄·화면 크기**뿐이다. 답안·문제 본문은 보내지 않는다.
+- `feedback.js` 를 고치면 각 앱의 `?v=1` 을 올려야 옛 캐시가 안 잡힌다(허브 워커는 셸 밖 자산을 stale-while-revalidate 로 준다).
+- 율리(ETHICS)는 github.io 가 아니라 제 워커에서 서빙되므로 **절대 주소**로 부른다. 워커는 그 출처에서 의견만 받고 채점은 받지 않는다.
 
 `core/store.js`는 정본을 그대로 복사한 것이다. 정본이 바뀌면 여기도 함께 갱신한다.
 허브는 위성 앱과 **같은 IndexedDB(`lawhub` / `records`·`kv`)와 같은 `lawhub_uid`**를 읽는다.
