@@ -6,6 +6,11 @@
 <meta name="robots" content="noindex,nofollow">
 <title>의견함 — 관리자</title>
 <link rel="icon" href="/icon-256.png" type="image/png">
+<!-- 이 쪽만 따로 「의견함」 앱으로 홈 화면에 올릴 수 있게 — 아이폰은 홈 화면 앱이어야 웹 푸시가 온다 -->
+<link rel="manifest" href="/feedback-admin.webmanifest">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="의견함">
 <!--
   의견함(관리자용). 앱의 「의견 보내기」로 들어온 글을 읽고, 읽음·처리함을 표시한다.
 
@@ -14,6 +19,10 @@
   열쇠는 이 파일에도 저장소에도 없다. 워커에 직접 넣은 사람만 안다:
       cd CASE_Practice/worker && npx wrangler secret put FEEDBACK_ADMIN_KEY
   여기에 한 번 입력하면 이 기기의 localStorage 에만 남는다.
+
+  폰 알림(웹 푸시): 맨 위 「알림 켜기」. 열쇠 없이도 켤 수 있지만 신청은 「승인 대기」로 들어가고,
+  관리자가 노트북에서  npm run feedback -- push-ok N  으로 승인해야 의견이 온다.
+  받은 의견은 이 기기 안(서비스워커 Cache 'fb-inbox')에 쌓여 「이 기기에 온 의견」에 보인다.
 
   ⚠ 들어온 글은 남이 쓴 것이다. 반드시 textContent 로만 넣는다(innerHTML 금지).
 -->
@@ -45,12 +54,29 @@ button,input{font:inherit}
 .gate input{width:100%;height:42px;border:1px solid var(--bd);border-radius:10px;background:var(--sf);color:var(--tx);padding:0 12px;margin:14px 0 10px}
 .err{color:var(--no);font-size:13.5px;margin-top:10px}
 .empty{text-align:center;color:var(--tx2);padding:50px 10px}
+.push{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.push .grow{flex:1;min-width:200px}
+.sec{font-size:15px;margin:22px 0 10px}
+.okc{color:var(--ok)} .warn{color:var(--gold)}
 </style>
 </head>
 <body>
 <main>
-  <div id="gate" class="gate" hidden>
-    <h1>의견함</h1>
+  <h1>의견함</h1>
+  <div class="card push">
+    <div class="grow">
+      <b>이 기기로 새 의견 알림 받기</b>
+      <div id="pushState" class="muted">확인하는 중…</div>
+    </div>
+    <button id="pushOn" class="btn on" hidden>알림 켜기</button>
+    <button id="pushOff" class="btn sm" hidden>이 기기 알림 끄기</button>
+  </div>
+
+  <h2 class="sec">이 기기에 온 의견 <span id="inboxN" class="muted"></span></h2>
+  <div id="inbox"></div>
+
+  <h2 class="sec">서버 의견함 전체</h2>
+  <div id="gate" class="gate" hidden style="margin-top:10px">
     <div class="muted">관리자 열쇠를 넣으면 이 기기에 기억해 둡니다.</div>
     <input id="key" type="password" placeholder="관리자 열쇠" autocomplete="off">
     <button id="enter" class="btn on" style="width:100%">열기</button>
@@ -58,7 +84,6 @@ button,input{font:inherit}
   </div>
 
   <div id="app" hidden>
-    <h1>의견함</h1>
     <div id="counts" class="muted"></div>
     <div class="bar">
       <button class="btn on" data-f="new">새 것</button>
@@ -110,7 +135,7 @@ button,input{font:inherit}
   function showGate(msg){
     $('app').hidden = true; $('gate').hidden = false;
     $('gateErr').hidden = !msg; $('gateErr').textContent = msg || '';
-    $('key').focus();
+    if(msg) $('key').focus();   // 처음 열 때는 자판을 띄우지 않는다(폰에서 알림 칸이 밀려 올라간다)
   }
 
   function load(){
@@ -194,6 +219,109 @@ button,input{font:inherit}
   $('key').addEventListener('keydown', function(e){ if(e.key === 'Enter') enter(); });
 
   key() ? load() : showGate('');
+})();
+
+// ── 폰 알림(웹 푸시)과 이 기기에 온 의견 ──────────────────
+(function(){
+  'use strict';
+  // 공개키 — 비밀이 아니다. 짝이 되는 개인키는 워커 비밀값(VAPID_PRIVATE_JWK)에만 있다.
+  var VAPID = 'BDfVI4D_iwfsxRAMvkVUddxsU1yKK77MAW2m9qpGGnZDLiUPaJmxsXxfQyFTElab_nxVMMgMm8DeNaYb-gPS8fw';
+  var SUB_URL = 'https://case-grader.bar-exam.workers.dev/feedback/push';
+  var $ = function(id){ return document.getElementById(id); };
+  function el(tag, cls, text){
+    var e = document.createElement(tag); if(cls) e.className = cls;
+    if(text !== undefined && text !== null) e.textContent = text;   // 남이 쓴 글 — textContent 만
+    return e;
+  }
+  function state(msg, cls){ var s = $('pushState'); s.textContent = msg; s.className = cls || 'muted'; }
+  function keyBytes(b64){
+    var s = atob(b64.replace(/-/g,'+').replace(/_/g,'/') + '==='.slice((b64.length+3)%4));
+    var a = new Uint8Array(s.length); for(var i=0;i<s.length;i++) a[i] = s.charCodeAt(i); return a;
+  }
+  var ua = navigator.userAgent;
+  var iOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  var standalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  var label = iOS ? 'iPhone' : /Android/.test(ua) ? 'Android' : /Windows/.test(ua) ? 'Windows' : /Mac/.test(ua) ? 'Mac' : '기기';
+
+  function tell(sub){
+    return fetch(SUB_URL, {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({sub: sub.toJSON(), label: label})})
+      .then(function(r){ return r.json().catch(function(){ return {}; }).then(function(j){
+        if(!r.ok) throw new Error(j.error || ('오류 ' + r.status)); return j; }); });
+  }
+  function showStatus(j){
+    $('pushOn').hidden = true; $('pushOff').hidden = false;
+    if(j.status === 'active') state('켜짐 — 새 의견이 이 기기로 옵니다. (신청 #' + j.id + ')', 'okc');
+    else state('신청 #' + j.id + ' 접수 — 승인 대기 중. 노트북에서 승인하면 그때부터 옵니다.', 'warn');
+  }
+
+  function setup(){
+    if(!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)){
+      state(iOS && !standalone
+        ? '아이폰은 Safari 공유 버튼 → 「홈 화면에 추가」로 「의견함」 앱을 만든 뒤, 그 앱을 열어 여기서 켜세요.'
+        : '이 브라우저는 웹 푸시를 지원하지 않습니다. (안드로이드 크롬, 아이폰 홈 화면 앱에서 됩니다)', 'warn');
+      return;
+    }
+    navigator.serviceWorker.register('/sw.js', {scope: '/'}).then(function(){ return navigator.serviceWorker.ready; })
+    .then(function(reg){
+      $('pushOn').onclick = function(){
+        $('pushOn').disabled = true; state('권한을 묻는 중…');
+        Notification.requestPermission().then(function(p){
+          if(p !== 'granted') throw new Error('알림 권한이 거부됐습니다. 설정에서 이 사이트 알림을 허용해 주세요.');
+          return reg.pushManager.subscribe({userVisibleOnly: true, applicationServerKey: keyBytes(VAPID)});
+        }).then(tell).then(showStatus).catch(function(e){ state(e.message, 'err'); })
+        .then(function(){ $('pushOn').disabled = false; });
+      };
+      $('pushOff').onclick = function(){
+        reg.pushManager.getSubscription().then(function(s){ return s && s.unsubscribe(); }).then(function(){
+          $('pushOff').hidden = true; $('pushOn').hidden = false;
+          state('꺼짐 — 이 기기로는 더 오지 않습니다.');
+        });
+      };
+      return reg.pushManager.getSubscription().then(function(sub){
+        if(!sub){
+          $('pushOn').hidden = false;
+          state(Notification.permission === 'denied'
+            ? '이 사이트 알림이 차단돼 있습니다. 브라우저 설정에서 허용한 뒤 켜세요.' : '꺼짐');
+          return;
+        }
+        // 이미 구독 중이면 다시 알려 지금 상태(대기/승인)를 받아 온다 — 서버는 같은 구독을 두 번 넣지 않는다
+        return tell(sub).then(showStatus);
+      });
+    }).catch(function(e){ state(e.message, 'err'); });
+  }
+
+  function kst(iso){
+    var d = new Date(iso); if(isNaN(d)) return '';
+    return d.toLocaleString('ko-KR', {month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});
+  }
+  function inbox(){
+    var box = $('inbox');
+    if(!('caches' in window)) return;
+    caches.open('fb-inbox').then(function(c){ return c.match('/__fb_inbox__'); })
+    .then(function(r){ return r ? r.json() : []; }).catch(function(){ return []; })
+    .then(function(list){
+      box.textContent = '';
+      $('inboxN').textContent = list.length ? '(' + list.length + ')' : '';
+      if(!list.length){ box.appendChild(el('div','muted','아직 없습니다. 알림을 켜면 새 의견이 여기에도 쌓입니다.')); return; }
+      list.forEach(function(d){
+        var card = el('div','card');
+        var head = el('div','head');
+        head.appendChild(el('span','tag', d.app || '?'));
+        head.appendChild(el('span','tag k' + (d.kind || ''), d.kind || ''));
+        head.appendChild(el('span', null, '#' + (d.id == null ? '?' : d.id) + ' · ' + kst(d.ts || d.got)));
+        if(d.user) head.appendChild(el('span', null, '· ' + d.user));
+        card.appendChild(head);
+        card.appendChild(el('div','body', d.text || ''));
+        var bits = [d.where && ('화면: ' + d.where), d.contact && ('연락처: ' + d.contact)].filter(Boolean);
+        if(bits.length){ var c = el('div','ctx'); bits.forEach(function(b){ c.appendChild(el('div', null, b)); }); card.appendChild(c); }
+        box.appendChild(card);
+      });
+    });
+  }
+  if('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', function(e){ if(e.data && e.data.fbInbox) inbox(); });
+  document.addEventListener('visibilitychange', function(){ if(!document.hidden) inbox(); });
+  setup(); inbox();
 })();
 </script>
 </body>

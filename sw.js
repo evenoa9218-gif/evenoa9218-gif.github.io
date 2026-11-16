@@ -14,7 +14,7 @@
  */
 'use strict';
 
-const VERSION = 'v4';
+const VERSION = 'v5';   // v5: 의견함 웹 푸시
 const SHELL_CACHE   = `lawhub-shell-${VERSION}`;
 const RUNTIME_CACHE = `lawhub-runtime-${VERSION}`;
 const DATA_CACHE    = `lawhub-data-${VERSION}`;
@@ -139,4 +139,51 @@ self.addEventListener('fetch', (e) => {
 
   // 그 밖의 셸 자산(css/js/아이콘)은 stale-while-revalidate.
   e.respondWith(staleWhileRevalidate(req, SHELL_CACHE));
+});
+
+// ── 의견함 웹 푸시 ───────────────────────────────
+// 관리자가 /feedback-admin.html 에서 「이 기기로 알림 받기」를 켜면, 새 의견이 들어올 때마다
+// 사례형 채점 워커(case-grader)가 이 기기로 암호화된 푸시를 보낸다.
+// 받은 의견은 알림으로 띄우고, 이 기기 안(Cache Storage 'fb-inbox')에도 쌓아 둔다 —
+// 노트북·토큰 없이 폰에서 지난 의견을 다시 볼 수 있게. ('lawhub-' 로 시작하지 않으니 버전 정리에 안 지워진다)
+const FB_INBOX = 'fb-inbox';
+const FB_INBOX_KEY = '/__fb_inbox__';
+const FB_INBOX_MAX = 300;
+
+async function fbInboxAdd(item) {
+  const cache = await caches.open(FB_INBOX);
+  let list = [];
+  try { const r = await cache.match(FB_INBOX_KEY); if (r) list = await r.json(); } catch (_) { list = []; }
+  if (!list.some((x) => x.id === item.id && item.id != null)) list.unshift(item);
+  await cache.put(FB_INBOX_KEY, new Response(JSON.stringify(list.slice(0, FB_INBOX_MAX)),
+    { headers: { 'Content-Type': 'application/json' } }));
+}
+
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (_) { d = { text: e.data ? e.data.text() : '' }; }
+  const title = `의견함 #${d.id ?? '?'} · ${d.app || ''} ${d.kind || ''}`.trim();
+  const tail = [d.user && `보낸 이 ${d.user}`, d.where].filter(Boolean).join(' · ');
+  e.waitUntil(Promise.all([
+    fbInboxAdd(Object.assign({ got: new Date().toISOString() }, d)).catch(() => {}),
+    self.registration.showNotification(title, {
+      body: (d.text || '(내용 없음)') + (tail ? `\n— ${tail}` : ''),
+      tag: `fb-${d.id ?? Date.now()}`,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      data: { url: '/feedback-admin.html#inbox' },
+    }),
+  ]));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = new URL((e.notification.data && e.notification.data.url) || '/feedback-admin.html', self.location.origin).href;
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const w of wins) {
+      if (w.url.split('#')[0] === url.split('#')[0]) { await w.focus(); w.postMessage({ fbInbox: true }); return; }
+    }
+    await self.clients.openWindow(url);
+  })());
 });
