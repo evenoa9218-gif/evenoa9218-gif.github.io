@@ -5,10 +5,12 @@
  *
  *   <script src="/feedback.js?v=1" defer data-app="CASE"></script>
  *
- *   data-app      HUB · MCQ · CASE · RECORD · NOTES · ETHICS (워커가 이 목록만 받는다)
+ *   data-app      HUB · MCQ · CASE · RECORD · NOTES (워커가 이 목록만 받는다)
  *   data-button   "off" 면 단추를 안 띄운다 — 앱이 제 창구를 갖고 있을 때(MCQ).
  *                 그때는 window.LawFeedback.send({kind, text, ctx}) 로 글만 흘려보낸다.
- *   data-bottom   단추를 바닥에서 얼마나 띄울지(px). 바닥에 탭바가 있는 앱(율리)용.
+ *   data-bottom   단추를 바닥에서 얼마나 띄울지(px). 바닥에 다른 단추가 있는 화면용.
+ *
+ * ⚠ 통합사이트(허브 + 위성 앱 넷) 전용이다. 율리(법조윤리)는 별개 앱이라 여기에 섞지 않는다.
  *
  * 받는 곳은 채점 워커의 /feedback → D1. 읽는 법은 CASE_Practice/worker 의 `npm run feedback`
  * 또는 허브의 /feedback-admin.html.
@@ -31,7 +33,7 @@
   var ds = (me && me.dataset) || {};
   var seg = (location.pathname.split('/')[1] || '').toLowerCase();
   var APP = (ds.app || { mcq: 'MCQ', case_practice: 'CASE', record_practice: 'RECORD',
-    core_notes: 'NOTES', ethics: 'ETHICS' }[seg] || 'HUB').toUpperCase();
+    core_notes: 'NOTES' }[seg] || 'HUB').toUpperCase();
 
   // ── 보고 있던 화면 ─────────────────────────────────────
   // 「채점 칸이 작다」는 말만 와서는 어느 화면인지 모른다. 주소와 눈에 보이는 제목을 같이 보낸다.

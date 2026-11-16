@@ -50,9 +50,9 @@ GitHub Pages에서 `{계정}.github.io` 이름의 저장소만 사이트 루트(
 
 | 속성 | 뜻 |
 |---|---|
-| `data-app` | `HUB` · `MCQ` · `CASE` · `RECORD` · `NOTES` · `ETHICS` — 워커가 이 목록만 받는다 |
+| `data-app` | `HUB` · `MCQ` · `CASE` · `RECORD` · `NOTES` — 워커가 이 목록만 받는다 |
 | `data-button="off"` | 단추를 안 띄운다. 앱이 제 창구를 갖고 있을 때(MCQ 의 문항별 피드백) — `window.LawFeedback.send({kind, text, ctx})` 로 글만 흘려보낸다 |
-| `data-bottom="76"` | 단추를 바닥에서 띄울 높이(px). 바닥 탭바가 있는 앱(율리)용 |
+| `data-bottom="76"` | 단추를 바닥에서 띄울 높이(px). 바닥에 다른 단추가 있는 화면용 |
 
 **읽는 법은 둘이다.**
 
@@ -68,7 +68,7 @@ GitHub Pages에서 `{계정}.github.io` 이름의 저장소만 사이트 루트(
   앱 단축키가 「입력 중」인 줄 모르고 먹기 때문이다.
 - 함께 가는 것은 **화면 주소·눈에 보이는 제목 몇 줄·화면 크기**뿐이다. 답안·문제 본문은 보내지 않는다.
 - `feedback.js` 를 고치면 각 앱의 `?v=1` 을 올려야 옛 캐시가 안 잡힌다(허브 워커는 셸 밖 자산을 stale-while-revalidate 로 준다).
-- 율리(ETHICS)는 github.io 가 아니라 제 워커에서 서빙되므로 **절대 주소**로 부른다. 워커는 그 출처에서 의견만 받고 채점은 받지 않는다.
+- **통합사이트 전용이다.** 율리(법조윤리)는 별개 앱이라 여기에 섞지 않는다 — 위젯도 달지 않고, 워커도 그 출처를 받지 않는다.
 
 `core/store.js`는 정본을 그대로 복사한 것이다. 정본이 바뀌면 여기도 함께 갱신한다.
 허브는 위성 앱과 **같은 IndexedDB(`lawhub` / `records`·`kv`)와 같은 `lawhub_uid`**를 읽는다.
