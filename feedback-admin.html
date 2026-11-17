@@ -4,13 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<title>의견함 — 관리자</title>
+<title>관리자 — 변시대비</title>
 <link rel="icon" href="/icon-256.png" type="image/png">
 <!-- 이 쪽만 따로 「의견함」 앱으로 홈 화면에 올릴 수 있게 — 아이폰은 홈 화면 앱이어야 웹 푸시가 온다 -->
 <link rel="manifest" href="/feedback-admin.webmanifest">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="의견함">
+<meta name="apple-mobile-web-app-title" content="관리자">
 <!--
   의견함(관리자용). 앱의 「의견 보내기」로 들어온 글을 읽고, 읽음·처리함을 표시한다.
 
@@ -64,11 +64,55 @@ button,input{font:inherit}
   border-radius:0 8px 8px 0;padding:7px 10px;margin-bottom:7px}
 .rta{width:100%;min-height:64px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);
   padding:8px 9px;font:inherit;font-size:14px;resize:vertical}
+/* ── 관리자 앱 탭 ── */
+.tabs{display:flex;gap:4px;margin:12px 0 16px;border-bottom:1px solid var(--bd);overflow-x:auto}
+.tabs button{border:0;background:none;color:var(--tx2);padding:10px 13px;font-size:14.5px;cursor:pointer;white-space:nowrap;
+  border-bottom:2.5px solid transparent;margin-bottom:-1px}
+.tabs button.on{color:var(--ac);border-bottom-color:var(--ac);font-weight:700}
+.tabs .dot{display:inline-block;min-width:18px;padding:0 5px;margin-left:5px;border-radius:9px;background:var(--no);color:#fff;font-size:11px;line-height:18px;text-align:center}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 12px}
+.inv-app{font-size:16px;margin:20px 0 8px;padding-bottom:5px;border-bottom:2px solid var(--ac);color:var(--ac)}
+.inv-subj{font-weight:700;font-size:14px;margin:12px 0 5px}
+.inv-row{display:grid;grid-template-columns:74px 1fr auto;gap:8px;align-items:baseline;padding:7px 2px;border-bottom:1px solid var(--bd);font-size:14px}
+.inv-kind{font-size:11.5px;color:var(--tx2);border:1px solid var(--bd);border-radius:9px;padding:0 7px;text-align:center;white-space:nowrap;justify-self:start}
+.inv-kind.k모범답안,.inv-kind.k해설,.inv-kind.k교재{color:var(--gold);border-color:var(--gold)}
+.inv-n{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.inv-note{grid-column:2 / 4;font-size:12px;color:var(--tx2);margin-top:-4px}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin-bottom:14px}
+.kv .card{margin:0;text-align:center}
+.kv b{display:block;font-size:20px}
+table.t{width:100%;border-collapse:collapse;font-size:13.5px}
+table.t th,table.t td{border-bottom:1px solid var(--bd);padding:7px 6px;text-align:left}
+table.t th{color:var(--tx2);font-weight:600;font-size:12.5px}
+table.t td.r,table.t th.r{text-align:right;font-variant-numeric:tabular-nums}
+@media(max-width:520px){ .inv-row{grid-template-columns:64px 1fr auto} }
 </style>
 </head>
 <body>
 <main>
-  <h1>의견함</h1>
+  <h1>관리자</h1>
+  <div class="muted">변시대비 통합사이트 — 의견 · 반영 자료 · 채점 사용량 · 알림 기기</div>
+  <div class="tabs" id="tabs">
+    <button data-t="fb" class="on">의견<span id="fbDot" class="dot" hidden></span></button>
+    <button data-t="inv">반영 자료</button>
+    <button data-t="use">채점 사용량</button>
+    <button data-t="dev">알림 기기<span id="devDot" class="dot" hidden></span></button>
+  </div>
+
+  <section id="tab-inv" hidden>
+    <div class="muted" id="invMeta"></div>
+    <div class="chips" id="invChips"></div>
+    <div id="invBody"><div class="empty">불러오는 중…</div></div>
+  </section>
+
+  <section id="tab-use" hidden><div id="useBody"><div class="empty">불러오는 중…</div></div></section>
+
+  <section id="tab-dev" hidden>
+    <div class="muted" style="margin-bottom:10px">새 의견 알림을 받을 기기. 누구나 신청은 할 수 있으니, 내 기기만 「승인」한다.</div>
+    <div id="devBody"><div class="empty">불러오는 중…</div></div>
+  </section>
+
+  <section id="tab-fb">
   <div class="card push">
     <div class="grow">
       <b>이 기기로 새 의견 알림 받기</b>
@@ -102,6 +146,7 @@ button,input{font:inherit}
     </div>
     <div id="list"></div>
   </div>
+  </section>
 </main>
 
 <script>
@@ -151,7 +196,8 @@ button,input{font:inherit}
       $('gate').hidden = true; $('app').hidden = false;
       var c = {}; (d.counts||[]).forEach(function(r){ c[r.status] = r.n; });
       $('counts').textContent = '새 것 ' + (c.new||0) + ' · 읽음 ' + (c.seen||0) + ' · 처리함 ' + (c.done||0);
-      document.title = ((c.new||0) ? '(' + c.new + ') ' : '') + '의견함 — 관리자';
+      document.title = ((c.new||0) ? '(' + c.new + ') ' : '') + '관리자 — 변시대비';
+      var dot = $('fbDot'); dot.hidden = !(c.new||0); dot.textContent = c.new || '';
       render(d.rows||[]);
     }).catch(function(e){
       if(e.status === 401){ try{ localStorage.removeItem(KEY); }catch(x){} showGate('열쇠가 맞지 않습니다.'); return; }
@@ -245,6 +291,138 @@ button,input{font:inherit}
   $('key').addEventListener('keydown', function(e){ if(e.key === 'Enter') enter(); });
 
   key() ? load() : showGate('');
+  window.__admin = { call: call, key: key, el: el, kst: kst };
+})();
+
+// ── 탭: 반영 자료 · 채점 사용량 · 알림 기기 ──────────────────
+(function(){
+  'use strict';
+  var A = window.__admin, el = A.el, $ = function(id){ return document.getElementById(id); };
+  function needKey(box){
+    box.textContent = '';
+    box.appendChild(el('div','empty','「의견」 탭에서 관리자 열쇠를 먼저 넣어 주세요.'));
+  }
+  function fail(box, e){
+    if(e.status === 401 || e.status === 503){ needKey(box); return; }
+    box.textContent = ''; box.appendChild(el('div','err', e.message));
+  }
+  function show(t){
+    ['fb','inv','use','dev'].forEach(function(x){ $('tab-' + x).hidden = x !== t; });
+    document.querySelectorAll('#tabs button').forEach(function(b){ b.classList.toggle('on', b.dataset.t === t); });
+    try{ history.replaceState(null, '', '#' + t); }catch(e){}
+    if(t === 'inv') loadInv();
+    if(t === 'use') loadUse();
+    if(t === 'dev') loadDev();
+  }
+  $('tabs').addEventListener('click', function(e){ var b = e.target.closest('button[data-t]'); if(b) show(b.dataset.t); });
+
+  // ── 반영 자료 — 네 앱에 무슨 과목·유형에 무슨 책이 들어 있는지(데이터에서 직접 센 것) ──
+  var inv = null, invApp = '';
+  function loadInv(){
+    if(!A.key()){ needKey($('invBody')); return; }
+    if(inv){ drawInv(); return; }
+    A.call('GET', null, '?view=inventory').then(function(d){
+      inv = d.inventory;
+      if(!inv){ $('invBody').textContent = ''; $('invBody').appendChild(el('div','empty','아직 올린 목록이 없습니다. 노트북에서 npm run inventory -- --push')); return; }
+      $('invMeta').textContent = '데이터에서 직접 센 것 · ' + String(inv.generated).slice(0,10) + ' 기준 · 다시 세려면 노트북에서 npm run inventory -- --push';
+      var apps = []; inv.rows.forEach(function(r){ if(apps.indexOf(r.app) < 0) apps.push(r.app); });
+      var chips = $('invChips'); chips.textContent = '';
+      [''].concat(apps).forEach(function(a){
+        var b = el('button','btn sm' + (a === invApp ? ' on' : ''), a || '전체');
+        b.onclick = function(){ invApp = a; chips.querySelectorAll('button').forEach(function(x){ x.classList.toggle('on', x === b); }); drawInv(); };
+        chips.appendChild(b);
+      });
+      drawInv();
+    }).catch(function(e){ fail($('invBody'), e); });
+  }
+  function drawInv(){
+    var box = $('invBody'); box.textContent = '';
+    var lastApp = null, lastSubj = null;
+    inv.rows.filter(function(r){ return !invApp || r.app === invApp; }).forEach(function(r){
+      if(r.app !== lastApp){ box.appendChild(el('h2','inv-app', r.app)); lastApp = r.app; lastSubj = null; }
+      if(r.subject !== lastSubj){ box.appendChild(el('div','inv-subj', r.subject)); lastSubj = r.subject; }
+      var row = el('div','inv-row');
+      row.appendChild(el('span','inv-kind k' + r.kind, r.kind));
+      row.appendChild(el('span', null, r.title));
+      row.appendChild(el('span','inv-n', (r.count == null ? '?' : Number(r.count).toLocaleString()) + (r.unit ? ' ' + r.unit : '')));
+      if(r.note) row.appendChild(el('span','inv-note', r.note));
+      box.appendChild(row);
+    });
+  }
+
+  // ── 채점 사용량 ──
+  function loadUse(){
+    var box = $('useBody');
+    if(!A.key()){ needKey(box); return; }
+    A.call('GET', null, '?view=usage').then(function(d){
+      box.textContent = '';
+      var kv = el('div','kv');
+      function tile(big, small){ var c = el('div','card'); c.appendChild(el('b', null, big)); c.appendChild(el('span','muted', small)); kv.appendChild(c); }
+      var t = d.today || {};
+      tile('$' + (t.usd || 0), '최근 24시간 · ' + (t.n || 0) + '건 · ' + (t.people || 0) + '명');
+      var m0 = (d.month || [])[0];
+      tile('$' + (m0 ? m0.usd : 0), (m0 ? m0.m : '이번 달') + ' · ' + (m0 ? m0.n : 0) + '건');
+      if(d.cap) tile('$' + (d.cap.daily || '?') + ' / $' + (d.cap.monthly || '?'), '하루 · 한 달 한도');
+      box.appendChild(kv);
+      function table(title, heads, rows){
+        box.appendChild(el('h2','sec', title));
+        if(!rows.length){ box.appendChild(el('div','muted','기록 없음')); return; }
+        var tb = el('table','t'), tr = el('tr');
+        heads.forEach(function(h){ tr.appendChild(el('th', h[1] ? 'r' : null, h[0])); });
+        tb.appendChild(tr);
+        rows.forEach(function(r){ var x = el('tr'); r.forEach(function(v, i){ x.appendChild(el('td', heads[i][1] ? 'r' : null, v == null ? '' : String(v))); }); tb.appendChild(x); });
+        box.appendChild(tb);
+      }
+      table('최근 30일 — 유형·과목별', [['유형'],['과목'],['건수',1],['달러',1],['건당',1],['실패',1]],
+        (d.recent || []).map(function(r){ return [r.mode, r.subject, r.n, r.usd, r.per, r.bad]; }));
+      table('월별', [['월'],['건수',1],['달러',1]], (d.month || []).map(function(r){ return [r.m, r.n, r.usd]; }));
+    }).catch(function(e){ fail(box, e); });
+  }
+
+  // ── 알림 기기 ──
+  function loadDev(){
+    var box = $('devBody');
+    if(!A.key()){ needKey(box); return; }
+    A.call('GET', null, '?view=push').then(function(d){
+      box.textContent = '';
+      var subs = d.subs || [];
+      var pend = subs.filter(function(s){ return s.status !== 'active'; }).length;
+      $('devDot').hidden = !pend; $('devDot').textContent = pend || '';
+      if(!subs.length){ box.appendChild(el('div','empty','신청한 기기가 없습니다. 받을 기기에서 이 화면을 열고 「의견」 탭의 「알림 켜기」를 누르세요.')); return; }
+      subs.forEach(function(s){
+        var card = el('div','card' + (s.status === 'active' ? '' : ' new'));
+        var head = el('div','head');
+        head.appendChild(el('span','tag', s.label || '기기'));
+        head.appendChild(el('span', s.status === 'active' ? 'okc' : 'warn', s.status === 'active' ? '받는 중' : '승인 대기'));
+        head.appendChild(el('span', null, '#' + s.id + ' · 신청 ' + A.kst(s.ts)));
+        card.appendChild(head);
+        card.appendChild(el('div','muted', (s.ua || '').slice(0, 110)));
+        if(s.last_ok) card.appendChild(el('div','note','마지막 전송 성공 ' + A.kst(s.last_ok)));
+        if(s.last_err) card.appendChild(el('div','err','마지막 실패: ' + s.last_err));
+        var acts = el('div','acts');
+        function act(label, status, cls, ask){
+          var b = el('button','btn sm' + (cls || ''), label);
+          b.onclick = function(){
+            if(ask && !confirm(ask)) return;
+            A.call('PATCH', {push: {id: s.id, status: status}}).then(loadDev).catch(function(e){ alert(e.message); });
+          };
+          acts.appendChild(b);
+        }
+        if(s.status === 'active') act('받기 중지', 'pending'); else act('승인', 'active', ' on');
+        act('삭제', 'delete', '', '이 기기 신청을 지울까요?');
+        card.appendChild(acts);
+        box.appendChild(card);
+      });
+    }).catch(function(e){ fail(box, e); });
+  }
+
+  var h = (location.hash || '').replace('#','');
+  if(['inv','use','dev'].indexOf(h) >= 0) show(h);
+  // 대기 중인 기기가 있으면 탭에 점을 찍는다
+  if(A.key()) A.call('GET', null, '?view=push').then(function(d){
+    var n = (d.subs || []).filter(function(s){ return s.status !== 'active'; }).length;
+    $('devDot').hidden = !n; $('devDot').textContent = n || '';
+  }).catch(function(){});
 })();
 
 // ── 폰 알림(웹 푸시)과 이 기기에 온 의견 ──────────────────
