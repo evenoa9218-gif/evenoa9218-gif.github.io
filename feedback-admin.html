@@ -58,6 +58,12 @@ button,input{font:inherit}
 .push .grow{flex:1;min-width:200px}
 .sec{font-size:15px;margin:22px 0 10px}
 .okc{color:var(--ok)} .warn{color:var(--gold)}
+.reply{margin-top:10px;padding-top:9px;border-top:1px dashed var(--bd)}
+.rlab{font-size:12px;color:var(--tx2);margin-bottom:4px}
+.rtext{white-space:pre-wrap;word-break:break-word;font-size:14px;background:var(--bg);border-left:3px solid var(--ac);
+  border-radius:0 8px 8px 0;padding:7px 10px;margin-bottom:7px}
+.rta{width:100%;min-height:64px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);
+  padding:8px 9px;font:inherit;font-size:14px;resize:vertical}
 </style>
 </head>
 <body>
@@ -181,6 +187,26 @@ button,input{font:inherit}
         card.appendChild(c);
       }
       if(r.note) card.appendChild(el('div','note','메모: ' + r.note));
+
+      // 답장 — 보낸 사람이 다음에 사이트(어느 앱이든)에 들어오면 화면에 카드로 뜬다
+      var rep = el('div','reply');
+      if(r.reply){
+        rep.appendChild(el('div','rlab', '내 답장 · ' + kst(r.reply_ts) + (r.reply_seen ? ' · 상대가 읽음' : ' · 아직 안 읽음')));
+        rep.appendChild(el('div','rtext', r.reply));
+      }
+      var reach = Number(r.has_cid) ? '' : r.user ? '이 의견은 로그인 ID(' + r.user + ')로 찾아 전달합니다.' : '보낸 사람을 찾을 표식이 없어 답장이 전달되지 않습니다.';
+      if(reach) rep.appendChild(el('div','rlab', reach));
+      var rta = el('textarea','rta'); rta.placeholder = r.reply ? '답장 고치기 (비우고 보내면 답장을 거둡니다)' : '답장 쓰기 — 보낸 사람이 다음에 들어오면 뜹니다';
+      rta.maxLength = 2000; if(r.reply) rta.value = r.reply;
+      var rb = el('button','btn sm on', r.reply ? '답장 고치기' : '답장 보내기');
+      rb.onclick = function(){
+        rb.disabled = true;
+        call('PATCH', {id: r.id, reply: rta.value}).then(load)
+          .catch(function(e){ alert(e.message); rb.disabled = false; });
+      };
+      var rrow = el('div','acts'); rrow.appendChild(rb);
+      rep.appendChild(rta); rep.appendChild(rrow);
+      card.appendChild(rep);
 
       var acts = el('div','acts');
       var memo = el('input'); memo.type = 'text'; memo.placeholder = '메모 (무엇을 고쳤는지)'; memo.maxLength = 1000;

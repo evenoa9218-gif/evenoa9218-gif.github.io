@@ -3,7 +3,7 @@
  *
  * 허브에 한 벌만 두고 각 앱이 불러 쓴다. 고칠 때 여기 한 곳만 고치면 된다.
  *
- *   <script src="/feedback.js?v=1" defer data-app="CASE"></script>
+ *   <script src="/feedback.js?v=2" defer data-app="CASE"></script>
  *
  *   data-app      HUB · MCQ · CASE · RECORD · NOTES (워커가 이 목록만 받는다)
  *   data-button   "off" 면 단추를 안 띄운다 — 앱이 제 창구를 갖고 있을 때(MCQ).
@@ -77,6 +77,22 @@
     } catch (e) { return false; }
   }
 
+  // 의견을 보낸 브라우저의 표식 — 관리자 답장을 이 브라우저에 띄울 때 쓴다.
+  // 통합사이트 앱 다섯 곳이 한 출처라 어느 앱에서 보내도, 어느 앱에 들어와도 같은 표식이다.
+  // 이름·기기 정보가 아니라 무작위 글자다. 의견을 처음 보낼 때 만든다.
+  var CID_KEY = 'law_fb_cid';
+  function cidOf(make) {
+    try {
+      var c = localStorage.getItem(CID_KEY) || '';
+      if (/^[a-z0-9]{16,40}$/.test(c)) return c;
+      if (!make) return '';
+      var a = new Uint8Array(12); crypto.getRandomValues(a);
+      c = Array.prototype.map.call(a, function (x) { return ('0' + x.toString(16)).slice(-2); }).join('');
+      localStorage.setItem(CID_KEY, c);
+      return c;
+    } catch (e) { return ''; }
+  }
+
   // ── 보내기 ────────────────────────────────────────────
   function send(o) {
     var text = String((o && o.text) || '').trim().slice(0, MAX);
@@ -86,7 +102,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         app: (o.app || APP), kind: o.kind || '기타', text: text,
-        contact: (o.contact || '').slice(0, 120), user: userId(), ctx: context(o.ctx),
+        contact: (o.contact || '').slice(0, 120), user: userId(), ctx: context(o.ctx), cid: cidOf(true),
       }),
     }).then(function (r) {
       return r.json().catch(function () { return {}; }).then(function (j) {
@@ -96,6 +112,80 @@
     });
   }
   window.LawFeedback = { send: send, open: function () {}, app: APP };
+
+  // ── 관리자 답장 ───────────────────────────────────────
+  // 의견을 보낸 사람이 다시 들어오면(어느 앱이든) 아직 확인 안 한 답장을 카드로 띄운다.
+  // 단추를 숨긴 앱(MCQ)에서도 띄운다 — 그래서 단추와 따로 그린다.
+  // 의견을 보낸 적 없는 사람(표식도 로그인 ID 도 없음)은 묻지도 않는다. 묻는 것도 3분에 한 번까지.
+  var REPLY_CHECK_KEY = 'law_fb_rchk';
+  function checkReplies() {
+    var cid = cidOf(false), uid = userId();
+    if (!cid && !uid) return;
+    try {
+      var last = +localStorage.getItem(REPLY_CHECK_KEY) || 0;
+      if (Date.now() - last < 3 * 60 * 1000) return;
+      localStorage.setItem(REPLY_CHECK_KEY, String(Date.now()));
+    } catch (e) {}
+    fetch(ENDPOINT + '/inbox?cid=' + encodeURIComponent(cid) + '&uid=' + encodeURIComponent(uid))
+      .then(function (r) { return r.ok ? r.json() : { replies: [] }; })
+      .then(function (j) { if (j.replies && j.replies.length) showReplies(j.replies, cid, uid); })
+      .catch(function () {});
+  }
+  function showReplies(list, cid, uid) {
+    var h = document.createElement('div');
+    h.id = 'law-feedback-reply';
+    var r = h.attachShadow({ mode: 'open' });
+    r.innerHTML =
+      '<style>:host{all:initial}' +
+      '*{box-sizing:border-box;font-family:system-ui,-apple-system,"Malgun Gothic","Apple SD Gothic Neo",sans-serif}' +
+      '.c{--bg:#fff;--tx:#1f2d3a;--tx2:#5b6b7a;--bd:#c9d6e2;--ac:#2f5d8a;--acTx:#fff;--sf:#f2f6fa}' +
+      '.c.dark{--bg:#1f2731;--tx:#e6edf3;--tx2:#9aa9b8;--bd:#3a4654;--ac:#7fb0de;--acTx:#10202e;--sf:#2a3440}' +
+      '.c{position:fixed;right:14px;bottom:' + (Math.max(0, parseInt(ds.bottom, 10) || 14) + 52) + 'px;z-index:2147483002;' +
+        'width:min(380px,calc(100vw - 28px));max-height:70vh;overflow-y:auto;background:var(--bg);color:var(--tx);' +
+        'border:1px solid var(--ac);border-radius:14px;padding:14px 15px 12px;box-shadow:0 14px 44px rgba(0,0,0,.3)}' +
+      '.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}' +
+      '.top b{font-size:15px;color:var(--ac)}' +
+      '.x{border:0;background:none;color:var(--tx2);font-size:20px;line-height:1;cursor:pointer;padding:4px 6px;border-radius:6px}' +
+      '.mine{font-size:12.5px;line-height:1.6;color:var(--tx2);background:var(--sf);border-radius:8px;padding:7px 9px;' +
+        'white-space:pre-wrap;word-break:break-word;max-height:7.5em;overflow:hidden}' +
+      '.lab{font-size:11.5px;color:var(--tx2);margin:9px 0 3px}' +
+      '.rep{font-size:14.5px;line-height:1.75;white-space:pre-wrap;word-break:break-word}' +
+      '.row{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px}' +
+      '.n{font-size:11.5px;color:var(--tx2)}' +
+      '.ok{min-height:38px;padding:0 18px;border-radius:10px;border:0;background:var(--ac);color:var(--acTx);font-size:14px;font-weight:600;cursor:pointer}' +
+      '@media print{.c{display:none!important}}</style>' +
+      '<div class="c" role="dialog" aria-label="관리자 답장">' +
+        '<div class="top"><b>💬 관리자 답장</b><button class="x" type="button" aria-label="나중에 보기">×</button></div>' +
+        '<div class="lab"></div><div class="mine"></div>' +
+        '<div class="lab">답장</div><div class="rep"></div>' +
+        '<div class="row"><span class="n"></span><button class="ok" type="button">확인</button></div>' +
+      '</div>';
+    var q = function (s) { return r.querySelector(s); };
+    var labs = r.querySelectorAll('.lab');
+    var i = 0;
+    function draw() {
+      var it = list[i];
+      q('.c').className = 'c' + (isDark() ? ' dark' : '');
+      labs[0].textContent = '보내신 의견 (' + (it.kind || '') + (it.ts ? ' · ' + String(it.ts).slice(0, 10) : '') + ')';
+      q('.mine').textContent = it.text || '';          // 남이 쓴 글 — textContent 만
+      q('.rep').textContent = it.reply || '';
+      q('.n').textContent = list.length > 1 ? (i + 1) + ' / ' + list.length : '';
+    }
+    q('.x').addEventListener('click', function () { h.remove(); });   // 확인 안 하면 다음에 또 뜬다
+    q('.ok').addEventListener('click', function () {
+      var it = list[i];
+      fetch(ENDPOINT + '/inbox', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: it.id, cid: cid, uid: uid }) }).catch(function () {});
+      i++;
+      if (i < list.length) draw(); else h.remove();
+    });
+    ['keydown', 'keyup', 'keypress'].forEach(function (t) { r.addEventListener(t, function (e) { e.stopPropagation(); }); });
+    draw();
+    document.body.appendChild(h);
+  }
+  function startReplies() { setTimeout(checkReplies, 1500); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startReplies); else startReplies();
+
   if (ds.button === 'off') return;                // 창구만 열어 두고 단추는 안 그린다
 
   // ── 화면 ──────────────────────────────────────────────
