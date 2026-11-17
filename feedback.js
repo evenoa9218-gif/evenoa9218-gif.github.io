@@ -3,7 +3,7 @@
  *
  * 허브에 한 벌만 두고 각 앱이 불러 쓴다. 고칠 때 여기 한 곳만 고치면 된다.
  *
- *   <script src="/feedback.js?v=2" defer data-app="CASE"></script>
+ *   <script src="/feedback.js?v=3" defer data-app="CASE"></script>
  *
  *   data-app      HUB · MCQ · CASE · RECORD · NOTES (워커가 이 목록만 받는다)
  *   data-button   "off" 면 단추를 안 띄운다 — 앱이 제 창구를 갖고 있을 때(MCQ).
@@ -116,20 +116,51 @@
   // ── 관리자 답장 ───────────────────────────────────────
   // 의견을 보낸 사람이 다시 들어오면(어느 앱이든) 아직 확인 안 한 답장을 카드로 띄운다.
   // 단추를 숨긴 앱(MCQ)에서도 띄운다 — 그래서 단추와 따로 그린다.
-  // 의견을 보낸 적 없는 사람(표식도 로그인 ID 도 없음)은 묻지도 않는다. 묻는 것도 3분에 한 번까지.
-  var REPLY_CHECK_KEY = 'law_fb_rchk';
-  function checkReplies() {
+  // 의견을 보낸 적 없는 사람(표식도 로그인 ID 도 없음)은 묻지도 않는다.
+  //
+  // ⚠ 처음에는 **페이지를 열 때 한 번만** 물었다. 그래서 답장이 안 닿았다(2026-11-17):
+  //   · 앱은 한 번 열면 새로 고침 없이 오래 쓴다 — 그동안 온 답장은 영영 안 뜬다
+  //   · 폰 홈 화면 앱은 다시 띄워도 페이지를 새로 열지 않는다
+  //   · 로그인 전에 뜬 페이지는 ID 가 없어 묻지 않고 끝났다
+  //   · 3분 제한 시각을 묻기 **전에** 적어, 요청이 실패해도 3분 동안 다시 안 물었다
+  // 지금은 열 때 · 화면으로 돌아올 때 · 켜 둔 동안 90초마다 · 로그인 ID 가 생기거나 바뀔 때 묻는다.
+  var REPLY_CHECK_KEY = 'law_fb_rchk2';
+  var replyBusy = false, lastWho = null;
+  // × 로 닫은 답장은 이 탭을 쓰는 동안 다시 띄우지 않는다(다음에 들어오면 다시 뜬다). 「확인」을 눌러야 끝난다.
+  function later() { try { return JSON.parse(sessionStorage.getItem('law_fb_later') || '[]'); } catch (e) { return []; } }
+  function checkReplies(force) {
     var cid = cidOf(false), uid = userId();
     if (!cid && !uid) return;
-    try {
-      var last = +localStorage.getItem(REPLY_CHECK_KEY) || 0;
-      if (Date.now() - last < 3 * 60 * 1000) return;
-      localStorage.setItem(REPLY_CHECK_KEY, String(Date.now()));
-    } catch (e) {}
-    fetch(ENDPOINT + '/inbox?cid=' + encodeURIComponent(cid) + '&uid=' + encodeURIComponent(uid))
-      .then(function (r) { return r.ok ? r.json() : { replies: [] }; })
-      .then(function (j) { if (j.replies && j.replies.length) showReplies(j.replies, cid, uid); })
-      .catch(function () {});
+    if (replyBusy || document.getElementById('law-feedback-reply')) return;   // 묻는 중이거나 카드가 떠 있다
+    var who = cid + '|' + uid;
+    if (!force) {
+      try {
+        var saved = (localStorage.getItem(REPLY_CHECK_KEY) || '').split('@');
+        if (saved[0] === who && Date.now() - (+saved[1] || 0) < 90 * 1000) return;
+      } catch (e) {}
+    }
+    replyBusy = true;
+    fetch(ENDPOINT + '/inbox?cid=' + encodeURIComponent(cid) + '&uid=' + encodeURIComponent(uid), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (j) {
+        try { localStorage.setItem(REPLY_CHECK_KEY, who + '@' + Date.now()); } catch (e) {}   // 성공했을 때만 적는다
+        var list = (j.replies || []).filter(function (x) { return later().indexOf(x.id) < 0; });
+        if (list.length && !document.getElementById('law-feedback-reply')) showReplies(list, cid, uid);
+      })
+      .catch(function () {})
+      .then(function () { replyBusy = false; });
+  }
+  function watchReplies() {
+    setTimeout(checkReplies, 1200);
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) checkReplies(); });
+    window.addEventListener('focus', function () { checkReplies(); });
+    window.addEventListener('pageshow', function () { checkReplies(); });
+    setInterval(function () {
+      if (document.hidden) return;
+      var who = cidOf(false) + '|' + userId();
+      if (who !== lastWho) { lastWho = who; checkReplies(true); }        // 로그인했거나 사용자가 바뀌었다
+      else checkReplies();                                               // 90초 제한 안에서
+    }, 5000);
   }
   function showReplies(list, cid, uid) {
     var h = document.createElement('div');
@@ -171,7 +202,10 @@
       q('.rep').textContent = it.reply || '';
       q('.n').textContent = list.length > 1 ? (i + 1) + ' / ' + list.length : '';
     }
-    q('.x').addEventListener('click', function () { h.remove(); });   // 확인 안 하면 다음에 또 뜬다
+    q('.x').addEventListener('click', function () {                  // 확인 안 하면 다음에 들어올 때 또 뜬다
+      try { sessionStorage.setItem('law_fb_later', JSON.stringify(later().concat(list.slice(i).map(function (x) { return x.id; })))); } catch (e) {}
+      h.remove();
+    });
     q('.ok').addEventListener('click', function () {
       var it = list[i];
       fetch(ENDPOINT + '/inbox', { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -183,8 +217,7 @@
     draw();
     document.body.appendChild(h);
   }
-  function startReplies() { setTimeout(checkReplies, 1500); }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startReplies); else startReplies();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', watchReplies); else watchReplies();
 
   if (ds.button === 'off') return;                // 창구만 열어 두고 단추는 안 그린다
 
